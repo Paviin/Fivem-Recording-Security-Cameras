@@ -51,7 +51,7 @@
 
 ## Benutzeroberfläche (UI)
 - **UI Öffnen:**  
-  Mit dem Befehl `viewcams` wird die Benutzeroberfläche geöffnet. Es wird empfohlen, die UI im Vollbildmodus anzuzeigen, aber dies kann individuell angepasst werden.
+  Mit dem Befehl `viewcams` wird die Benutzeroberfläche geöffnet. Es wird empfohlen, die UI im Vollbildmodus anzuzeigen, ist aber dir überlassen.
 - **Auflistung der Kameras:**  
   Alle Kameras werden untereinander gelistet. Die Liste sollte folgende Informationen enthalten:
   - **Kamera-Name**
