@@ -6,28 +6,17 @@ shared_scripts {
 }
 
 client_scripts {
-    'PolyZone/client.lua',       
-    'PolyZone/BoxZone.lua',        
-    'PolyZone/CircleZone.lua',   
-    'PolyZone/ComboZone.lua',      
-    'PolyZone/EntityZone.lua',    
-    'PolyZone/PolyZone.lua',       
-    'lua/client/cam.lua',            
-    'lua/client/main.lua'           
+    'PolyZone/client.lua',         -- PolyZone Hauptdatei
+    'PolyZone/BoxZone.lua',        -- BoxZone
+    'PolyZone/CircleZone.lua',     -- CircleZone
+    'PolyZone/ComboZone.lua',      -- ComboZone
+    'PolyZone/EntityZone.lua',     -- EntityZone
+    'PolyZone/PolyZone.lua',       -- PolyZone Basisklasse
+    'lua/client/cam.lua',            -- Dein Kamera-Skript
+    'lua/client/main.lua'            -- Dein Kamera-Skript
 }
 
 server_scripts {
     'creation/server/*.lua',
-    'PolyZone/server.lua',
-    'lua/server/cacheFile.lua',
-}
-
-ui_page 'html/index.html'
-
-files {
-    'html/*.png',
-    'html/*.js',
-    'html/*.css',
-    'html/*.html',
-    'js/jquery-3.7.1.min.js',
-}
+    'PolyZone/server.lua'
+  }
