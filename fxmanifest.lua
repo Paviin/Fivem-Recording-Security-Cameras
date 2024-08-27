@@ -1,22 +1,34 @@
 fx_version 'cerulean'
 game 'gta5'
 
+author 'Paviin - Pavyn & m6rccc - Marc'
+description 'Fivem Video Recording Script'
+version '1.0.0'
+
 shared_scripts {
-    'config.lua'
+    'config.lua',
+    'locales.lua',
 }
 
 client_scripts {
-    'PolyZone/client.lua',         -- PolyZone Hauptdatei
-    'PolyZone/BoxZone.lua',        -- BoxZone
-    'PolyZone/CircleZone.lua',     -- CircleZone
-    'PolyZone/ComboZone.lua',      -- ComboZone
-    'PolyZone/EntityZone.lua',     -- EntityZone
-    'PolyZone/PolyZone.lua',       -- PolyZone Basisklasse
-    'lua/client/cam.lua',            -- Dein Kamera-Skript
-    'lua/client/main.lua'            -- Dein Kamera-Skript
+    'PolyZone/client.lua',       
+    'PolyZone/BoxZone.lua',        
+    'PolyZone/CircleZone.lua',   
+    'PolyZone/ComboZone.lua',      
+    'PolyZone/EntityZone.lua',    
+    'PolyZone/PolyZone.lua',       
+    'lua/client/cam.lua',  
+    'lua/client/controlPoint.lua',          
+    'lua/client/main.lua'           
 }
 
 server_scripts {
-    'creation/server/*.lua',
-    'PolyZone/server.lua'
-  }
+    'PolyZone/server.lua',
+    'lua/server/cacheFile.lua',
+}
+
+ui_page 'html/index.html'
+
+files {
+    'html/**.*',
+}
