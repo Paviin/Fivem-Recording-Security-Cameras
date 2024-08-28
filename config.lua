@@ -5,6 +5,8 @@ Config.Debug = false
 
 Config.Distance = 20.0
 
+Config.JobsTableQuery = 'SELECT identifier FROM users WHERE job = @job'
+
 Config.Marker = {
     enabled = true,
     settings = {
@@ -23,6 +25,7 @@ Config.Marker = {
 
 Config.Cams = {
     {
+        id  = 1,
         title = "Police Cam",
         description = "Police Cam 1",
         controlPoint = vector3(-393.0705, -2764.1851, 6.0004),
@@ -36,16 +39,21 @@ Config.Cams = {
 
         permissions = {
             jobs = {
-                {name = "police", maxCams = 2}
+                {
+                    name = "asd"
+                }
             },
             identifiers = {
-                {"steam:123456789abcdef", maxCams = 1}
+                {
+                    identifier = "license:d6a4657db0b45d37b70d43840f04b204711be1c6"
+                }
             }
         }
     },
     {
+        id = 2,
         title = "Police Cam",
-        description = "Police Cam 1",
+        description = "Police Cam 2",
         controlPoint = vector3(-393.0705, -2764.1851, 6.0004),
         camCoords = vector3(226.0677, 381.9196, 110.4175), 
         camHeading = 90.0, 
@@ -57,10 +65,14 @@ Config.Cams = {
 
         permissions = {
             jobs = {
-                {name = "police", maxCams = 2}
+                {
+                    name = "unemployed"
+                }
             },
             identifiers = {
-                {"steam:123456789abcdef", maxCams = 1}
+                {
+                    identifier = "steam:123456789abcdef"
+                }
             }
         }
     },
