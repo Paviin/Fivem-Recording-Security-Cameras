@@ -23,8 +23,10 @@ client_scripts {
 }
 
 server_scripts {
+    '@oxmysql/lib/MySQL.lua',
     'PolyZone/server.lua',
     'lua/server/cacheFile.lua',
+    'lua/Server/cameraPerms.lua'
 }
 
 ui_page 'html/index.html'
@@ -32,3 +34,5 @@ ui_page 'html/index.html'
 files {
     'html/**.*',
 }
+
+dependencies { 'oxmysql' }
