@@ -16,9 +16,8 @@ RegisterCommand('watchvideo', function(_, args)
 end)
 
 RegisterNetEvent('videoRecordingCameras:watchVideo')
-AddEventHandler('videoRecordingCameras:watchVideo', function(file)
-  print(file)
-  watchVideo(file)
+AddEventHandler('videoRecordingCameras:watchVideo', function(file, infoFile)
+  watchVideo(file, infoFile)
 end)
 
 function tprint (tbl, indent)
@@ -46,4 +45,8 @@ function tprint (tbl, indent)
     if cam then
         DeleteObject(cam)
     end
+  end)
+
+  Citizen.CreateThread(function()
+    TriggerServerEvent('videoRecordingCameras:requestCamerasPermission')
   end)

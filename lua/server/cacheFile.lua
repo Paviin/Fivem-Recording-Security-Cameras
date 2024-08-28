@@ -1,4 +1,4 @@
-local function createVideoCacheFile(tbl)
+local function createVideoCacheFile(tbl, id, center, coords, heading, title, description)
 	local currentTime = os.time()
 	local formattedTime = os.date("%d.%m.%Y_%H.%M.%S", currentTime)
 	local fileName = formattedTime..".json"
@@ -14,6 +14,13 @@ local function createVideoCacheFile(tbl)
 
 	table.insert(file, {
 		fileName = fileName,
+		id = id,
+		center = center,
+		coords = coords,
+		title = title,
+		description = description,
+		heading = heading,
+		index = #file + 1
 	})
 
 	file = json.encode(file)
@@ -39,16 +46,22 @@ AddEventHandler('videoRecordingCameras:getVideoCacheFile', function()
 end)	
 
 RegisterNetEvent('videoRecordingCameras:createCacheFile')
-AddEventHandler('videoRecordingCameras:createCacheFile', function(tbl)
-	createVideoCacheFile(tbl)
+AddEventHandler('videoRecordingCameras:createCacheFile', function(tbl, id, center, coords, heading, title, description)
+	createVideoCacheFile(tbl, id, center, coords, heading, title, description)
 end)	
 
 RegisterNetEvent('videoRecordingCameras:watchVideo')
 AddEventHandler('videoRecordingCameras:watchVideo', function(index)
 	local resourceName = GetCurrentResourceName()
 	local file = getVideoCacheFile()[tonumber(index)].fileName
+	local infoFile = json.decode(LoadResourceFile(resourceName, "cache/videoPaths.json"))
+	for k,v in pairs(infoFile) do
+		if v.index == tonumber(index) then
+			infoFile = v
+		end
+	end
 	file = json.decode(LoadResourceFile(resourceName, "cache/videos/"..file))
-	TriggerClientEvent('videoRecordingCameras:watchVideo', source, file)
+	TriggerClientEvent('videoRecordingCameras:watchVideo', source, file, infoFile)
 end)
 
 function tprint (tbl, indent)
@@ -66,7 +79,6 @@ function tprint (tbl, indent)
 	end
   end
 
--- server.lua
 
 RegisterNetEvent('deleteVehicleForPlayer')
 AddEventHandler('deleteVehicleForPlayer', function(vehicleNetId)

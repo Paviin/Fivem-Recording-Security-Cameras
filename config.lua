@@ -1,7 +1,7 @@
 
 Config = {}
 
-Config.Debug = false
+Config.Debug = true
 
 Config.Distance = 20.0
 
@@ -28,14 +28,14 @@ Config.Cams = {
         id  = 1,
         title = "Police Cam",
         description = "Police Cam 1",
-        controlPoint = vector3(-393.0705, -2764.1851, 6.0004),
+        controlPoint = vector3(189.6041, 301.7457, 105.477),
         camCoords = vector3(226.0677, 381.9196, 110.4175), 
         camHeading = 90.0, 
-        camVerticalHeading = 40, 
         fov = 50, 
         length = 30, 
         obj = "prop_cctv_cam_05a", 
-        camHeightFov = 20,
+        minCamHeightFov = 2,
+        maxCamHeightFov = 2,
 
         permissions = {
             jobs = {
@@ -55,13 +55,13 @@ Config.Cams = {
         title = "Police Cam",
         description = "Police Cam 2",
         controlPoint = vector3(-393.0705, -2764.1851, 6.0004),
-        camCoords = vector3(226.0677, 381.9196, 110.4175), 
-        camHeading = 90.0, 
-        camVerticalHeading = 40, 
+        camCoords = vector3(193.5627, 334.4494, 109.4351), 
+        camHeading = 185.5589, 
         fov = 50, 
         length = 30, 
         obj = "prop_cctv_cam_05a", 
-        camHeightFov = 20,
+        minCamHeightFov = 5,
+        maxCamHeightFov = 1,
 
         permissions = {
             jobs = {

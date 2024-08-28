@@ -1,16 +1,12 @@
-local camCoords = vector3(-388.9052, -2764.9802, 10.0004)
-local camHorizontalHeading = 307.4732
-local fov = 40.0
-local length = 200.0
-local camHeightFov = 50.0
+
 local recordedData = {}
 local entitiesInZone = {}
 local playbackRecording = false
 
-local halfFov = fov / 2.0
-local radHorizontalHeading = math.rad(camHorizontalHeading + 90)
 
-local function calculateZoneCorners()
+local function calculateZoneCorners(camCoords, camHorizontalHeading, fov, length)
+    local radHorizontalHeading = math.rad(camHorizontalHeading + 90)
+    local halfFov = fov / 2.0
     return {
         frontLeft = camCoords + vector3(
             math.cos(radHorizontalHeading - math.rad(halfFov)) * length,
@@ -35,22 +31,43 @@ local function calculateZoneCorners()
     }
 end
 
-local function createCamZone()
-    local corners = calculateZoneCorners()
-    return PolyZone:Create({
+local function createCamZone(id, title, description, camCoords, camHeading, fov, length, minCamHeightFov, maxCamHeightFov, obj)
+    local corners = calculateZoneCorners(camCoords, camHeading, fov, length)
+    local polyZone = PolyZone:Create({
         vector2(corners.backLeft.x, corners.backLeft.y),
         vector2(corners.frontLeft.x, corners.frontLeft.y),
         vector2(corners.frontRight.x, corners.frontRight.y),
         vector2(corners.backRight.x, corners.backRight.y)
     }, {
-        name = "camera_zone",
-        minZ = camCoords.z - camHeightFov,
-        maxZ = camCoords.z + camHeightFov,
+        name = "camera_zone_" .. id,
+        minZ = camCoords.z - minCamHeightFov,
+        maxZ = camCoords.z + maxCamHeightFov,
         debugPoly = Config.Debug
     })
+
+    return {
+        id = id,
+        title = title,
+        description = description,
+        obj = obj,
+        coords = vector3(corners.backLeft.x, corners.backLeft.y, camCoords.z),
+        zone = polyZone,
+        heading = camHeading,
+    }
 end
 
-local camZone = createCamZone()
+local camZones = {}
+
+Citizen.CreateThread(function()
+    for k,v in pairs(Config.Cams) do
+        local camZone = createCamZone(
+            v.id, v.title, v.description, v.camCoords, 
+            v.camHeading, v.fov, v.length, 
+            v.minCamHeightFov, v.maxCamHeightFov, v.obj
+        )
+        table.insert(camZones, camZone)
+    end
+end)
 
 local function isEntityVisibleToCamera(camCoords, entity)
     local entityCoords = GetEntityCoords(entity)
@@ -135,28 +152,31 @@ local function collectDataInZone()
     local peds = GetGamePool('CPed')
     local vehicles = GetGamePool('CVehicle')
 
-    for entity, _ in pairs(entitiesInZone) do
-        if DoesEntityExist(entity) and not camZone:isPointInside(GetEntityCoords(entity)) then
-            if IsEntityAPed(entity) then
-                table.insert(recordedData, collectPedData(entity))
-            elseif IsEntityAVehicle(entity) then
-                table.insert(recordedData, collectVehicleData(entity))
+    for k, cam in pairs(camZones) do
+        for entity, _ in pairs(entitiesInZone) do
+            if DoesEntityExist(entity) and not cam.zone:isPointInside(GetEntityCoords(entity)) then
+                if IsEntityAPed(entity) then
+                    table.insert(recordedData, collectPedData(entity))
+                elseif IsEntityAVehicle(entity) then
+                    table.insert(recordedData, collectVehicleData(entity))
+                end
+                entitiesInZone[entity] = nil
             end
-            entitiesInZone[entity] = nil
         end
-    end
 
-    for _, ped in ipairs(peds) do
-        if DoesEntityExist(ped) and camZone:isPointInside(GetEntityCoords(ped)) and isEntityVisibleToCamera(camCoords, ped) and GetVehiclePedIsIn(ped, false) == 0 then
-            entitiesInZone[ped] = true
-            table.insert(recordedData, collectPedData(ped))
+        for _, ped in ipairs(peds) do
+            if DoesEntityExist(ped) and cam.zone:isPointInside(GetEntityCoords(ped)) and isEntityVisibleToCamera(cam.coords, ped) and GetVehiclePedIsIn(ped, false) == 0 then
+                entitiesInZone[ped] = true
+
+                table.insert(recordedData, collectPedData(ped))
+            end
         end
-    end
 
-    for _, vehicle in ipairs(vehicles) do
-        if DoesEntityExist(vehicle) and camZone:isPointInside(GetEntityCoords(vehicle)) and isEntityVisibleToCamera(camCoords, vehicle) then
-            entitiesInZone[vehicle] = true
-            table.insert(recordedData, collectVehicleData(vehicle))
+        for _, vehicle in ipairs(vehicles) do
+            if DoesEntityExist(vehicle) and cam.zone:isPointInside(GetEntityCoords(vehicle)) and isEntityVisibleToCamera(cam.coords, vehicle) then
+                entitiesInZone[vehicle] = true
+                table.insert(recordedData, collectVehicleData(vehicle))
+            end
         end
     end
 end
@@ -165,21 +185,25 @@ local isPlayerInZone = false
 local spawnedPeds = {}
 local spawnedVehicles = {}
 
-camZone:onPlayerInOut(function(isPointInside, point, entity)
-    isPlayerInZone = isPointInside
-
-    if isPlayerInZone then
-        print("Spieler oder Ped erkannt")
-        TriggerServerEvent('createFile')
-        Citizen.CreateThread(function()
-            while isPlayerInZone do
-                collectDataInZone()
-                Citizen.Wait(875)
+Citizen.CreateThread(function()
+    for k, cam in pairs(camZones) do
+        cam.zone:onPlayerInOut(function(isPointInside, point, entity)
+            local isPlayerInZone = isPointInside
+            
+            if isPlayerInZone then
+                print("Spieler oder Ped erkannt")
+                TriggerServerEvent('createFile')
+                Citizen.CreateThread(function()
+                    while isPlayerInZone do
+                        collectDataInZone()
+                        Citizen.Wait(875)
+                    end
+                end)
+            else
+                TriggerServerEvent('videoRecordingCameras:createCacheFile', recordedData, cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description)
+                print("Spieler oder Ped hat Sichtweite verlassen und Daten wurden gespeichert")
             end
         end)
-    else
-        TriggerServerEvent('videoRecordingCameras:createCacheFile', recordedData)
-        print("Spieler oder Ped hat Sichtweite verlassen und Daten wurden gespeichert")
     end
 end)
 
@@ -289,10 +313,10 @@ local function removeNonRecordedEntities()
     end)
 end
 
-function watchVideo(file)
+function watchVideo(file, infoFile)
     playbackRecording = true
 
-    removeNonRecordedEntities()
+    --removeNonRecordedEntities()
     if #file == 0 then
         print("No recorded data available.")
         return
@@ -301,11 +325,12 @@ function watchVideo(file)
     local modelsToRequest = { "a_m_y_stbla_01", "a_m_y_beach_02" }
     requestModels(modelsToRequest)
 
+    tprint(infoFile)
     local cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
-    SetCamCoord(cam, camCoords.x, camCoords.y, camCoords.z)
-    SetCamFov(cam, fov - 20)
+    SetCamCoord(cam, infoFile.coords.x, infoFile.coords.y, infoFile.coords.z)
+    SetCamFov(cam, 90.0)  --------------------------------------------------------------------------------------------- WICHTIG NOCH MACHEN!!!!!!!!!
     RenderScriptCams(true, false, 0, true, true)
-    SetCamRot(cam, 0.0, 0.0, camHorizontalHeading, 2) 
+    SetCamRot(cam, 0.0, 0.0, infoFile.heading, 2) 
     DisplayHud(false)
     DisplayRadar(false)
 
