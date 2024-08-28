@@ -62,6 +62,10 @@ const openMenu = () => {
 
 const watchCam = (id) => {    
     post("watchCam", id)
+    cameras = {};
+    videos  = {}; 
+    document.body.style.display = "none"
+    
 }
 
 const recordings = (id) => {
