@@ -42,7 +42,7 @@ local function handleMarkerDisplay()
             end
             if IsControlJustPressed(0, 38) then
                 Citizen.CreateThread(function()
-                    TriggerServerEvent('videoRecordingCameras:getVideoCacheFile')
+                    TriggerServerEvent('videoRecordingCameras:requestCamerasPermission')
                 end)
                 SendNUIMessage({action = "open"})
                 SetNuiFocus(true, true)
@@ -75,7 +75,66 @@ RegisterNUICallback('close', function()
 end)
 
 RegisterNUICallback('watchCam', function(id)
+    local camCoords = vector3(-388.9052, -2764.9802, 10.0004)
+    local camHorizontalHeading = 307.4732
+    local fov = 40.0
+    local minFov = 1.0
+    local maxFov = 80.0
+    menuOpen = false
+    SetNuiFocus(false, false)
+    local cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
+    SetTimecycleModifier("Broken_camera_fuzz")
+    SetTimecycleModifierStrength(0.05)
+    SetCamCoord(cam, camCoords.x, camCoords.y, camCoords.z -0.5)
+    SetCamFov(cam, fov - 20)
+    RenderScriptCams(true, false, 0, true, true)
+    SetCamRot(cam, 0.0, 0.0, camHorizontalHeading, 2) 
+    DisplayHud(false)
+    DisplayRadar(false)
 
+    local horizontal = 0
+    local vertikal = 0
+    while true do
+        if IsControlPressed(0, 34) then -- links
+            horizontal = horizontal +fov / 100
+
+            if horizontal > 35 then horizontal = 35.0 end
+            if horizontal < -35 then horizontal = -35.0 end
+            SetCamRot(cam, vertikal, 0.0, camHorizontalHeading + horizontal)
+        end
+        if IsControlPressed(0, 9) then -- rechts
+            horizontal = horizontal - fov / 100
+            if horizontal > 35 then horizontal = 35.0 end
+            if horizontal < -35 then horizontal = -35.0 end
+            SetCamRot(cam, vertikal, 0.0, camHorizontalHeading + horizontal)
+        end
+        if IsControlPressed(0, 8) then -- nach unten
+            vertikal = vertikal - fov / 100
+            if vertikal > 10.0 then vertikal = 10.0 end
+            if vertikal < -50.0 then vertikal = -50.0 end
+            SetCamRot(cam, vertikal, 0, camHorizontalHeading + horizontal)
+        end
+        if IsControlPressed(0, 32) then -- nach oben
+            vertikal = vertikal + fov / 100
+
+            if vertikal > 10.0 then vertikal = 10.0 end
+            if vertikal < -50.0 then vertikal = -50.0 end
+            SetCamRot(cam, vertikal, 0.0, camHorizontalHeading + horizontal)
+        end
+        if IsControlPressed(0, 17) then
+            fov = fov - 5
+            if fov < minFov then fov = minFov end
+            if fov > maxFov then fov = maxFov end
+            SetCamFov(cam, fov)
+        end
+        if IsControlPressed(0, 16) then
+            fov = fov + 5
+            if fov > maxFov then fov = maxFov end
+            if fov < minFov then fov = minFov end
+            SetCamFov(cam, fov)
+        end
+        Citizen.Wait()
+    end
 end)
 
 RegisterNetEvent('videoRecordingCameras:getVideoCacheFile')
@@ -84,3 +143,8 @@ AddEventHandler('videoRecordingCameras:getVideoCacheFile', function(files)
   Citizen.Wait(500)
   SendNUIMessage({cameras = Config.Cams, videos = files, locales = {Locales.MenuHeader, Locales.MenuDescription}})
 end)
+
+RegisterNetEvent('videoRecordingCameras:requestCamerasPermission')
+AddEventHandler('videoRecordingCameras:requestCamerasPermission', function(cameras)
+    SendNUIMessage({cameras = cameras, videos = {}, locales = {Locales.MenuHeader, Locales.MenuDescription}})
+end)    
