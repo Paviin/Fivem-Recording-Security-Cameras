@@ -146,5 +146,8 @@ end)
 
 RegisterNetEvent('videoRecordingCameras:requestCamerasPermission')
 AddEventHandler('videoRecordingCameras:requestCamerasPermission', function(cameras)
-    SendNUIMessage({cameras = cameras, videos = {}, locales = {Locales.MenuHeader, Locales.MenuDescription}})
+    for k,v in pairs(cameras) do
+        cameras[k].location = GetStreetNameFromHashKey(GetStreetNameAtCoord(cameras[k].coords.x, cameras[k].coords.y, cameras[k].coords.z))
+    end
+    SendNUIMessage({cameras = cameras, locales = {Locales.MenuHeader, Locales.MenuDescription}})
 end)    

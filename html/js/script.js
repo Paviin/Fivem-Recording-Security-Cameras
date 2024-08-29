@@ -7,8 +7,8 @@ $(document).ready(function () {
     window.addEventListener('message', function (event) {
         const data = event.data
         
-        cameras = data.cameras
-        videos  = data.videos
+        cameras = data.cameras.cameras
+        videos  = data.cameras.videos
         locales = data.locales
 
         if (videos != undefined && cameras != undefined) {
@@ -46,11 +46,12 @@ const openMenu = () => {
                     <p class="camera-description-bottom">${cameras[index].description}</p>
                 </div>
                 <div class="camera-position">
-                    <p>Beverly Hills</p>
+                    <p>${cameras[index].location}</p>
+                    <p>${videos.length}</p>
                 </div>
                 <div class="camera-actions">
-                    <button onclick=watchCam(${index_})>Anschauen</button>
-                    <button onclick=recordings(${index_})>Aufnahmen</button>
+                    <button onclick=watchCam(${cameras[index]})>Anschauen</button>
+                    <button onclick=recordings(${cameras[index]})>Aufnahmen</button>
                 </div>
             </div>
         `
@@ -71,21 +72,24 @@ const watchCam = (id) => {
 const recordings = (id) => {
     inRecordingMenu = true;
     $('.container-camera-lists').empty();
+
+
     let index_ = 0;
 
     for (const index in videos) {
+        const formattedDate = videos[index].fileName.replace(/(\d{2})\.(\d{2})\.(\d{4})_(\d{2})\.(\d{2})\.(\d{2})/, '$3-$2-$1 $4:$5:$6');
         index_++;
         
         let appendData = `
             <div class="camera-box">
                 <div class="camera-description">
-                    <p class="camera-description-top">${videos[index].fileName}</p>
+                    <p class="camera-description-top">${formattedDate}</p>
                 </div>
                 <div class="camera-position">
-                    <p>Beverly Hills</p>
+                    <p>${videos[index].location}</p>
                 </div>
                 <div class="camera-actions">
-                    <button onclick=watchCam(${index_})>Video anschauen</button>
+                    <button onclick=watchCam(${videos[index]})>Video anschauen</button>
                 </div>
             </div>
         `

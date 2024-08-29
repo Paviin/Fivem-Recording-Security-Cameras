@@ -34,7 +34,12 @@ AddEventHandler('videoRecordingCameras:requestCamerasPermission', function()
                 local match = string.match(v__.identifier, ":(%w+)")
                 if match == match_ then
                     if not isCameraAlreadyAdded(v) then
-                        table.insert(cameras, v_)
+                        table.insert(cameras, {cameras = v_})
+                        for _, file in pairs(files) do
+                            if file.id == v_.id then
+                                cameras[k_].videos = file
+                            end
+                        end
                     end
                 end
             end
@@ -72,7 +77,14 @@ AddEventHandler('videoRecordingCameras:requestCamerasPermission', function()
 
                         if match == match_ then
                             if not isCameraAlreadyAdded(v) then
-                                table.insert(cameras, v)
+                                table.insert(cameras, {cameras = v})
+                                local files = getVideoCacheFile()
+
+                                for _, file in pairs(files) do
+                                    if file.id == v.id then
+                                        cameras[k].videos = file
+                                    end
+                                end
                             end
                         end
                     end

@@ -6,7 +6,6 @@ Citizen.CreateThread(function()
     end
 end)
 
-
 RegisterCommand('allvideos', function()
     TriggerServerEvent('videoRecordingCameras:getVideoCacheFile')
 end)

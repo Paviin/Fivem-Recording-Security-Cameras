@@ -1,4 +1,4 @@
-local function createVideoCacheFile(tbl, id, center, coords, heading, title, description)
+local function createVideoCacheFile(tbl, id, center, coords, heading, title, description, fov)
 	local currentTime = os.time()
 	local formattedTime = os.date("%d.%m.%Y_%H.%M.%S", currentTime)
 	local fileName = formattedTime..".json"
@@ -19,6 +19,7 @@ local function createVideoCacheFile(tbl, id, center, coords, heading, title, des
 		coords = coords,
 		title = title,
 		description = description,
+		fov = fov,
 		heading = heading,
 		index = #file + 1
 	})
@@ -46,8 +47,8 @@ AddEventHandler('videoRecordingCameras:getVideoCacheFile', function()
 end)	
 
 RegisterNetEvent('videoRecordingCameras:createCacheFile')
-AddEventHandler('videoRecordingCameras:createCacheFile', function(tbl, id, center, coords, heading, title, description)
-	createVideoCacheFile(tbl, id, center, coords, heading, title, description)
+AddEventHandler('videoRecordingCameras:createCacheFile', function(tbl, id, center, coords, heading, title, description, fov)
+	createVideoCacheFile(tbl, id, center, coords, heading, title, description, fov)
 end)	
 
 RegisterNetEvent('videoRecordingCameras:watchVideo')

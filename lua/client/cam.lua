@@ -50,6 +50,7 @@ local function createCamZone(id, title, description, camCoords, camHeading, fov,
         title = title,
         description = description,
         obj = obj,
+        fov = fov,
         coords = vector3(corners.backLeft.x, corners.backLeft.y, camCoords.z),
         zone = polyZone,
         heading = camHeading,
@@ -200,7 +201,7 @@ Citizen.CreateThread(function()
                     end
                 end)
             else
-                TriggerServerEvent('videoRecordingCameras:createCacheFile', recordedData, cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description)
+                TriggerServerEvent('videoRecordingCameras:createCacheFile', recordedData, cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.fov)
                 print("Spieler oder Ped hat Sichtweite verlassen und Daten wurden gespeichert")
             end
         end)
@@ -328,7 +329,7 @@ function watchVideo(file, infoFile)
     tprint(infoFile)
     local cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
     SetCamCoord(cam, infoFile.coords.x, infoFile.coords.y, infoFile.coords.z)
-    SetCamFov(cam, 90.0)  --------------------------------------------------------------------------------------------- WICHTIG NOCH MACHEN!!!!!!!!!
+    SetCamFov(infoFile.fov, 90.0)
     RenderScriptCams(true, false, 0, true, true)
     SetCamRot(cam, 0.0, 0.0, infoFile.heading, 2) 
     DisplayHud(false)
