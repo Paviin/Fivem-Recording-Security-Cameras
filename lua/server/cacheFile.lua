@@ -3,7 +3,7 @@ local function createVideoCacheFile(tbl, id, center, coords, heading, title, des
 	local formattedTime = os.date("%d.%m.%Y_%H.%M.%S", currentTime)
 	local fileName = formattedTime..".json"
 	local resourceName = GetCurrentResourceName()
-
+	local fileFound = false
 	local file = SaveResourceFile(resourceName, "cache/videos/"..fileName, json.encode(tbl), -1)
 
 	if not file then
@@ -12,17 +12,27 @@ local function createVideoCacheFile(tbl, id, center, coords, heading, title, des
 
 	file = json.decode(LoadResourceFile(resourceName, "cache/videoPaths.json"))
 
-	table.insert(file, {
-		fileName = fileName,
-		id = id,
-		center = center,
-		coords = coords,
-		title = title,
-		description = description,
-		fov = fov,
-		heading = heading,
-		index = #file + 1
-	})
+	for k, v in pairs(file) do
+		if v.id == id then
+			fileFound = true
+			table.insert(file[1].videos, fileName)
+		end
+	end
+
+	if not fileFound then
+		table.insert(file, {
+			videos = {},
+			id = id,
+			center = center,
+			coords = coords,
+			title = title,
+			description = description,
+			fov = fov,
+			heading = heading,
+			index = #file + 1
+		})
+		table.insert(file[1].videos, fileName)
+	end
 
 	file = json.encode(file)
 
