@@ -74,12 +74,9 @@ RegisterNUICallback('close', function()
     SetNuiFocus(false, false)
 end)
 
-RegisterNUICallback('watchRecording', function(cam, video)
-    for k, v in pairs(Config.Cams) do
-        if v.id == cam then
-            
-        end
-    end
+RegisterNUICallback('watchRecording', function(cam)
+    local cam, video = table.unpack(cam)
+    TriggerServerEvent('videoRecordingCameras:watchVideo', cam, video)
 end)
 
 RegisterNUICallback('watchCam', function(id)

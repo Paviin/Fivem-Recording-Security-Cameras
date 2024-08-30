@@ -326,9 +326,13 @@ function watchVideo(file, infoFile)
     local modelsToRequest = { "a_m_y_stbla_01", "a_m_y_beach_02" }
     requestModels(modelsToRequest)
 
-    tprint(infoFile)
     local cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
-    SetCamCoord(cam, infoFile.coords.x, infoFile.coords.y, infoFile.coords.z)
+    local coords = vector3(infoFile.coords.x,infoFile.coords.y,infoFile.coords.z) + vector3(
+        math.cos(infoFile.heading - 1),
+        math.sin(infoFile.heading),
+        0
+    )
+    SetCamCoord(cam, coords.x, coords.y, coords.z)
     SetCamFov(infoFile.fov, 90.0)
     RenderScriptCams(true, false, 0, true, true)
     SetCamRot(cam, 0.0, 0.0, infoFile.heading, 2) 

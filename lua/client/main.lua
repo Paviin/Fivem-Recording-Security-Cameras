@@ -16,7 +16,7 @@ end)
 
 RegisterNetEvent('videoRecordingCameras:watchVideo')
 AddEventHandler('videoRecordingCameras:watchVideo', function(file, infoFile)
-  watchVideo(file, infoFile)
+  watchVideo(json.decode(file), infoFile)
 end)
 
 function tprint (tbl, indent)

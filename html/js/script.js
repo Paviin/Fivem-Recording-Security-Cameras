@@ -65,8 +65,13 @@ const watchCam = (id) => {
     document.body.style.display = "none"
 }
 
-const watchRecording = (camera, video) => {    
-    post("watchRecording", camera, video + 1)
+
+
+const watchRecording = (camera, video) => {        
+    camera++;
+    video++;
+    const x = [camera, video]
+    $.post(`https://${GetParentResourceName()}/watchRecording`, JSON.stringify(x), function (msg) {});
     cameras = {};
     videos  = {}; 
     document.body.style.display = "none"
