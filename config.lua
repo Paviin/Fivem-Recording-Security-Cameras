@@ -1,7 +1,7 @@
 
 Config = {}
 
-Config.Debug = false
+Config.Debug = true
 
 Config.Distance = 20.0
 
@@ -34,7 +34,7 @@ Config.Cams = {
         fov = 50.0, 
         length = 30, 
         obj = "prop_cctv_cam_05a", 
-        minCamHeightFov = 2,
+        minCamHeightFov = 10,
         maxCamHeightFov = 2,
 
         permissions = {
@@ -76,4 +76,29 @@ Config.Cams = {
             }
         }
     },
+    {
+        id = 3,
+        title = "Po",
+        description = "Police Cam 3",
+        controlPoint = vector3(189.6041, 301.7457, 105.477),
+        camCoords = vector3(143.6130, 195.5773, 113.1878), 
+        camHeading = 287.2511, 
+        fov = 70.0, 
+        length = 150, 
+        obj = "prop_cctv_cam_05a", 
+        minCamHeightFov = 20,
+        maxCamHeightFov = 10,
+        permissions = {
+            jobs = {
+                {
+                    name = "unemployed"
+                }
+            },
+            identifiers = {
+                {
+                    identifier = "steam:123456789abcdef"
+                }
+            }
+        }
+    }
 }

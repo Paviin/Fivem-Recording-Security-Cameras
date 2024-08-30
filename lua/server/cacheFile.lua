@@ -26,7 +26,7 @@ local function createVideoCacheFile(tbl, id, center, coords, heading, title, des
 	local fileName = formattedTime..".json"
 	local resourceName = GetCurrentResourceName()
 	local fileFound = false
-	local file = SaveResourceFile(resourceName, "cache/videos/"..fileName, json.encode(tbl), -1)
+	local file = SaveResourceFile(resourceName, "cache/videos/"..fileName, tbl, -1)
 
 	if not file then
 		print("Error while creating video cache file")

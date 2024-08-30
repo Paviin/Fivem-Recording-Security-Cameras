@@ -84,23 +84,24 @@ RegisterNUICallback('watchCam', function(id)
         if v.id == id then
             local camCoords = vector3(v.camCoords.x, v.camCoords.y, v.camCoords.z)
             local camHorizontalHeading = v.camHeading
-            local fov = v.fov
+            local fov = v.fov / 1.7
             local minFov = 1.0
             local maxFov = 80.0
             menuOpen = false
             SetNuiFocus(false, false)
             local cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
-            SetTimecycleModifier("Broken_camera_fuzz")
-            SetTimecycleModifierStrength(0.05)
-            SetCamCoord(cam, camCoords.x, camCoords.y, camCoords.z -0.5)
-            SetCamFov(cam, fov - 20)
+            SetTimecycleModifier("CAMERA_secuirity_FUZZ")
+            SetTimecycleModifierStrength(0.8)
+            SetCamCoord(cam, camCoords.x, camCoords.y, camCoords.z - 0.25)
+            SetCamFov(cam, fov)
+            SetCamRot(cam, -7.5, 0.0, camHorizontalHeading, 2) 
             RenderScriptCams(true, false, 0, true, true)
-            SetCamRot(cam, 0.0, 0.0, camHorizontalHeading, 2) 
+            
             DisplayHud(false)
             DisplayRadar(false)
 
             local horizontal = 0
-            local vertikal = 0
+            local vertikal = -7.5
             while true do
                 if IsControlPressed(0, 34) then -- links
                     horizontal = horizontal +fov / 100

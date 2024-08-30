@@ -176,6 +176,7 @@ local function collectDataInZone()
         for _, vehicle in ipairs(vehicles) do
             if DoesEntityExist(vehicle) and cam.zone:isPointInside(GetEntityCoords(vehicle)) and isEntityVisibleToCamera(cam.coords, vehicle) then
                 entitiesInZone[vehicle] = true
+
                 table.insert(recordedData, collectVehicleData(vehicle))
             end
         end
@@ -189,24 +190,50 @@ local spawnedVehicles = {}
 Citizen.CreateThread(function()
     for k, cam in pairs(camZones) do
         cam.zone:onPlayerInOut(function(isPointInside, point, entity)
-            local isPlayerInZone = isPointInside
-            
-            if isPlayerInZone then
-                print("Spieler oder Ped erkannt")
-                TriggerServerEvent('createFile')
-                Citizen.CreateThread(function()
-                    while isPlayerInZone do
-                        collectDataInZone()
+            if isPointInside then
+                recordedData = {}
+
+                if cam.recordingThread and cam.recordingThreadActive then
+                    cam.recordingThreadActive = false
+                end
+
+                cam.recordingThreadActive = true
+                cam.recordingThread = Citizen.CreateThread(function()
+                    while cam.recordingThreadActive do
+
+                        if not isEntityVisibleToCamera(cam.coords, PlayerPedId()) then
+                            print("Entität nicht sichtbar, Aufnahme wird gestoppt und gespeichert")
+                            cam.recordingThreadActive = false
+                            break
+                        end
+
+                        if #recordedData >= 500 then
+                            TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.fov)
+                            recordedData = {}
+                        else
+                            collectDataInZone()
+                        end
                         Citizen.Wait(875)
+                    end
+                    
+                    if not cam.recordingThreadActive and #recordedData > 5 then
+                        TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.fov)
+                        recordedData = {}
                     end
                 end)
             else
-                TriggerServerEvent('videoRecordingCameras:createCacheFile', recordedData, cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.fov)
-                print("Spieler oder Ped hat Sichtweite verlassen und Daten wurden gespeichert")
+                if cam.recordingThreadActive then
+                    cam.recordingThreadActive = false
+                end
+                if #recordedData > 1 then
+                    TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.fov)
+                end
+                recordedData = {}
             end
         end)
     end
 end)
+
 
 local function requestModels(models)
     for _, model in ipairs(models) do
@@ -316,6 +343,7 @@ end
 
 function watchVideo(file, infoFile)
     playbackRecording = true
+    SetNuiFocus(false, false)
 
     --removeNonRecordedEntities()
     if #file == 0 then
@@ -327,15 +355,12 @@ function watchVideo(file, infoFile)
     requestModels(modelsToRequest)
 
     local cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
-    local coords = vector3(infoFile.coords.x,infoFile.coords.y,infoFile.coords.z) + vector3(
-        math.cos(infoFile.heading - 1),
-        math.sin(infoFile.heading),
-        0
-    )
-    SetCamCoord(cam, coords.x, coords.y, coords.z)
-    SetCamFov(infoFile.fov, 90.0)
+    SetTimecycleModifier("CAMERA_secuirity_FUZZ")
+    SetTimecycleModifierStrength(0.8)
+    SetCamCoord(cam, infoFile.coords.x,infoFile.coords.y,infoFile.coords.z - 0.25)
+    SetCamFov(cam, infoFile.fov / 1.7)
     RenderScriptCams(true, false, 0, true, true)
-    SetCamRot(cam, 0.0, 0.0, infoFile.heading, 2) 
+    SetCamRot(cam, -7.5, 0.0, infoFile.heading, 2) 
     DisplayHud(false)
     DisplayRadar(false)
 
