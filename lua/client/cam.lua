@@ -31,8 +31,8 @@ local function calculateZoneCorners(camCoords, camHorizontalHeading, fov, length
     }
 end
 
-local function createCamZone(id, title, description, camCoords, camHeading, fov, length, minCamHeightFov, maxCamHeightFov, obj)
-    local corners = calculateZoneCorners(camCoords, camHeading, fov, length)
+local function createCamZone(id, title, description, camCoords, camHeading, minFov, maxFov, length, minCamHeightFov, maxCamHeightFov, obj)
+    local corners = calculateZoneCorners(camCoords, camHeading, maxFov, length)
     local polyZone = PolyZone:Create({
         vector2(corners.backLeft.x, corners.backLeft.y),
         vector2(corners.frontLeft.x, corners.frontLeft.y),
@@ -50,7 +50,8 @@ local function createCamZone(id, title, description, camCoords, camHeading, fov,
         title = title,
         description = description,
         obj = obj,
-        fov = fov,
+        minFov = minFov,
+        maxFov = maxFov,
         coords = vector3(corners.backLeft.x, corners.backLeft.y, camCoords.z),
         zone = polyZone,
         heading = camHeading,
@@ -63,7 +64,7 @@ Citizen.CreateThread(function()
     for k,v in pairs(Config.Cams) do
         local camZone = createCamZone(
             v.id, v.title, v.description, v.camCoords, 
-            v.camHeading, v.fov, v.length, 
+            v.camHeading, v.minFov, v.maxFov, v.length, 
             v.minCamHeightFov, v.maxCamHeightFov, v.obj
         )
         table.insert(camZones, camZone)
@@ -118,7 +119,6 @@ local function collectVehicleData(vehicle)
 
     for seat=driverSeat, lastSeat, 1 do
         local pedInVehicleSeat = GetPedInVehicleSeat(vehicleEntity, seat)
-        print(seat, pedInVehicleSeat)
         table.insert(pedsInVehicle, {
             ped  = pedInVehicleSeat,
             seat = seat
@@ -208,7 +208,7 @@ Citizen.CreateThread(function()
                         end
 
                         if #recordedData >= 500 then
-                            TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.fov)
+                            TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.maxFov)
                             recordedData = {}
                         else
                             collectDataInZone()
@@ -217,7 +217,7 @@ Citizen.CreateThread(function()
                     end
                     
                     if not cam.recordingThreadActive and #recordedData > 5 then
-                        TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.fov)
+                        TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.maxFov)
                         recordedData = {}
                     end
                 end)
@@ -226,7 +226,7 @@ Citizen.CreateThread(function()
                     cam.recordingThreadActive = false
                 end
                 if #recordedData > 1 then
-                    TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.fov)
+                    TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.maxFov)
                 end
                 recordedData = {}
             end
@@ -255,27 +255,55 @@ local function createPed(data)
 end
 
 local function createVehicle(data)
-    local vehicle = CreateVehicle(data.model, data.coords.x, data.coords.y, data.coords.z, data.heading, false, false)
+    local vehicle = CreateVehicle(data.model, data.coords.x, data.coords.y, data.coords.z, data.heading, true, false)
     SetVehicleOnGroundProperly(vehicle)
     SetVehicleColours(vehicle, data.colorPrimary, data.colorSecondary)
     SetVehicleNumberPlateText(vehicle, data.plate)
     SetVehicleEngineOn(vehicle, data.isEngineRunning, true, false)
     SetVehicleCurrentRpm(vehicle, data.rpm)
     SetVehicleFuelLevel(vehicle, data.fuelLevel)
+    SetEntityAsMissionEntity(vehicle, true, true)
+    
     local ped = CreatePedInsideVehicle(vehicle, 4, GetHashKey("a_m_y_stbla_01"), -1, true, false)
-    TaskVehicleDriveWander(ped, vehicle, 20.0, 443)
+    
+    SetPedFleeAttributes(ped, 2, false)  
+    SetPedCombatAttributes(ped, 46, true)
+    TaskSetBlockingOfNonTemporaryEvents(ped, true)
+    SetPedFleeAttributes(ped, 0, false) 
+    SetPedCombatAttributes(ped, 46, true) 
+
+    TaskSetBlockingOfNonTemporaryEvents(ped, true)
+
+    SetPedCanBeDraggedOut(ped, false)
+
+    SetEntityInvincible(vehicle, true)
+    
+    TaskVehicleDriveWander(ped, vehicle, 20.0, 443)  
+
+    SetPedKeepTask(ped, true)
+    
+    
     SetVehicleLights(vehicle, 2)
+    SetDriverAbility(ped, 1.0)
+    SetDriverAggressiveness(ped, 0.0)
 
     spawnedVehicles[data.plate] = vehicle
     return vehicle
 end
 
+
 local function handlePedPlayback(ped, data)
-    SetEntityCoords(ped, data.coords.x, data.coords.y, data.coords.z)
+    RequestAnimDict("move_m@brave")
+    while not HasAnimDictLoaded("move_m@brave") do
+        Citizen.Wait(0)
+    end
+
+    SetEntityCoords(ped, data.coords.x, data.coords.y, data.coords.z - 1.0)
+    TaskPlayAnim(ped, "move_m@brave", "walk", 8.0, -8.0, -1, 1, 0, false, false, false)
     SetEntityHeading(ped, data.heading)
 
     if data.isRunning then
-        TaskGoStraightToCoord(ped, data.coords.x, data.coords.y, data.coords.z, 10, -1, 100.0)
+        TaskGoStraightToCoord(ped, data.coords.x, data.coords.y, data.coords.z, 10.0, -1, 100.0, 0.0)
     elseif data.isWalking then
         TaskPlayAnim(ped, "move_m@walk", "walk", 8.0, -8.0, -1, 1, 0, false, false, false)
     elseif data.isAiming then
@@ -289,7 +317,7 @@ local function handleVehiclePlayback(vehicle, data)
     local driverSeat = -1
     local lastSeat = driverSeat + numberOfSeats - 1
 
-    for seat=driverSeat, lastSeat, 1 do
+    for seat = driverSeat, lastSeat, 1 do
         local pedInVehicleSeat = GetPedInVehicleSeat(vehicle, seat)
         table.insert(pedsInVehicle, {
             ped  = pedInVehicleSeat,
@@ -297,45 +325,69 @@ local function handleVehiclePlayback(vehicle, data)
         })
     end
 
-    SetEntityCoords(vehicle, data.coords.x, data.coords.y, data.coords.z, 0.0, 0.0, 0.0, false)
-
-    for k,v in pairs(pedsInVehicle) do
-        print(v.ped)
-        TaskVehicleDriveWander(v.ped, vehicle, 20.0, 443)
-        SetPedCoordsKeepVehicle(v.ped, data.coords.x, data.coords.y, data.coords.z)
-        SetPedIntoVehicle(v.ped, vehicle, v.seat)
-    end
-    SetPedIntoVehicle(GetPedInVehicleSeat(vehicle, -1), vehicle, -1)
-
-
+    SetEntityCoords(vehicle, data.coords.x, data.coords.y, data.coords.z)
     SetEntityHeading(vehicle, data.heading)
     SetVehicleOnGroundProperly(vehicle)
+
+    for k, v in pairs(pedsInVehicle) do
+        SetPedCoordsKeepVehicle(v.ped, data.coords.x, data.coords.y, data.coords.z)
+        TaskWarpPedIntoVehicle(v.ped, vehicle, v.seat)
+
+        SetPedCombatAttributes(v.ped, 46, true) 
+        TaskVehicleDriveWander(v.ped, vehicle, 20.0, 443)
+    end
 end
+
+RegisterNetEvent('clientDeleteVehicle')
+AddEventHandler('clientDeleteVehicle', function(vehicleNetId)
+    local vehicle = NetToVeh(vehicleNetId)
+    if DoesEntityExist(vehicle) then
+        SetEntityAlpha(vehicle, 0)
+        SetEntityVisible(vehicle, false, false)
+    end
+end)
 
 local function removeNonRecordedEntities()
     Citizen.CreateThread(function()
         while playbackRecording do
-            local allPeds = GetGamePool('CPed')
             local allVehicles = GetGamePool('CVehicle')
-        
-            for _, ped in ipairs(allPeds) do
-                if DoesEntityExist(ped) and camZone:isPointInside(GetEntityCoords(ped)) then
-                    --DeletePed(ped)
-                end
-            end
-        
-            for _, vehicle in ipairs(allVehicles) do
-                for _, spawnedVehicle in pairs (spawnedVehicles) do
-                    print(vehicle,spawnedVehicle)
-                    if vehicle ~= spawnedVehicle then
-                        if DoesEntityExist(vehicle) and camZone:isPointInside(GetEntityCoords(vehicle)) then
-                            --SetEntityAsMissionEntity(vehicle, true, true)
-                            --DeleteVehicle(vehicle)
-                            --SetVehicleAsNoLongerNeeded(vehicle)
+            local allPeds = GetGamePool('CPed')
+
+            for _, cam in pairs(camZones) do
+                for _, vehicle in ipairs(allVehicles) do
+                    local vehicleShouldBeVisible = false
+
+                    for _, spawnedVehicle in pairs(spawnedVehicles) do
+                        if vehicle == spawnedVehicle then
+                            vehicleShouldBeVisible = true
+                            break
                         end
                     end
+
+                    if not vehicleShouldBeVisible and DoesEntityExist(vehicle) and cam.zone:isPointInside(GetEntityCoords(vehicle)) then
+                        local vehicleNetId = VehToNet(vehicle)
+                        TriggerServerEvent('deleteVehicleForPlayer', vehicleNetId)
+                    end
                 end
+
+                --[[ 
+                for _, ped in ipairs(allPeds) do
+                    local pedShouldBeVisible = false
+
+                    for _, spawnedPed in pairs(spawnedPeds) do
+                        if ped == spawnedPed then
+                            pedShouldBeVisible = true
+                            break
+                        end
+                    end
+
+                    if not pedShouldBeVisible and DoesEntityExist(ped) and cam.zone:isPointInside(GetEntityCoords(ped)) then
+                        SetEntityVisible(ped, false, false)
+                        SetEntityNoCollisionEntity(ped, PlayerPedId(), false) 
+                    end
+                end]]
             end
+
             Citizen.Wait(1000)
         end
     end)
@@ -345,7 +397,7 @@ function watchVideo(file, infoFile)
     playbackRecording = true
     SetNuiFocus(false, false)
 
-    --removeNonRecordedEntities()
+    removeNonRecordedEntities()
     if #file == 0 then
         print("No recorded data available.")
         return
@@ -357,12 +409,16 @@ function watchVideo(file, infoFile)
     local cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
     SetTimecycleModifier("CAMERA_secuirity_FUZZ")
     SetTimecycleModifierStrength(0.8)
-    SetCamCoord(cam, infoFile.coords.x,infoFile.coords.y,infoFile.coords.z - 0.25)
-    SetCamFov(cam, infoFile.fov / 1.7)
+    SetCamCoord(cam, infoFile.coords.x, infoFile.coords.y, infoFile.coords.z - 0.25)
+    local fov = infoFile.maxFov / 2.1
+    SetCamFov(cam, fov)
+    SetCamRot(cam, -7.5, 0.0, infoFile.heading, 2)
     RenderScriptCams(true, false, 0, true, true)
-    SetCamRot(cam, -7.5, 0.0, infoFile.heading, 2) 
     DisplayHud(false)
     DisplayRadar(false)
+
+    local horizontal, vertical = 0, -7.5
+    local minFov, maxFov = infoFile.minFov, infoFile.maxFov
 
     Citizen.CreateThread(function()
         local index = 1
@@ -384,15 +440,36 @@ function watchVideo(file, infoFile)
         RenderScriptCams(false, false, 0, true, true)
         DisplayHud(true)
         DisplayRadar(true)
+        SetTimecycleModifier("None")
+        menuOpen = false
         playbackRecording = false
     end)
 
+
     Citizen.CreateThread(function()
-        Citizen.Wait(#file * 875 + 1000)
-        RenderScriptCams(false, false, 0, true, true)
-        DestroyCam(cam, false)
-        DisplayHud(true)
-        DisplayRadar(true)
-        print("Playback finished and camera reset.")
+        while playbackRecording do
+            if IsControlPressed(0, 34) then -- links
+                horizontal = math.min(35.0, horizontal + fov / 100)
+            elseif IsControlPressed(0, 9) then -- rechts
+                horizontal = math.max(-35.0, horizontal - fov / 100)
+            end
+
+            if IsControlPressed(0, 32) then -- nach oben
+                vertical = math.min(10.0, vertical + fov / 100)
+            elseif IsControlPressed(0, 8) then -- nach unten
+                vertical = math.max(-50.0, vertical - fov / 100)
+            end
+
+            if IsControlPressed(0, 17) then
+                fov = math.max(minFov, fov - 5)
+            elseif IsControlPressed(0, 16) then
+                fov = math.min(maxFov, fov + 5)
+            end
+
+            SetCamRot(cam, vertical, 0.0, infoFile.heading + horizontal)
+            SetCamFov(cam, fov)
+
+            Citizen.Wait(0)
+        end
     end)
 end

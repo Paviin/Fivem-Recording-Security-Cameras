@@ -2,7 +2,7 @@
 local playerPed = PlayerPedId()
 local playerCoords = vector3(0, 0, 0)
 local nearestCamDistance, nearestCamCoords
-local menuOpen = false
+menuOpen = false
 local files
 
 local function updatePlayerCoords()
@@ -80,68 +80,80 @@ RegisterNUICallback('watchRecording', function(cam)
 end)
 
 RegisterNUICallback('watchCam', function(id)
-    for k, v in pairs(Config.Cams) do
+    local ped = PlayerPedId()
+    local oldCoords = GetEntityCoords(ped)
+
+    local function setupCamera(camCoords, camHeading, fov)
+        local cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
+        SetTimecycleModifier("CAMERA_secuirity_FUZZ")
+        SetTimecycleModifierStrength(0.8)
+        SetCamCoord(cam, camCoords.x, camCoords.y, camCoords.z - 0.25)
+        SetCamFov(cam, fov)
+        SetCamRot(cam, -7.5, 0.0, camHeading, 2)
+        RenderScriptCams(true, false, 0, true, true)
+        DisplayHud(false)
+        DisplayRadar(false)
+        return cam
+    end
+
+    local function resetCamera(cam)
+        RenderScriptCams(false, false, 0, true, true)
+        DestroyCam(cam, false)
+        SetTimecycleModifierStrength(0.0)
+        DisplayHud(true)
+        DisplayRadar(true)
+    end
+
+    for _, v in pairs(Config.Cams) do
         if v.id == id then
-            local camCoords = vector3(v.camCoords.x, v.camCoords.y, v.camCoords.z)
-            local camHorizontalHeading = v.camHeading
-            local fov = v.fov / 1.7
-            local minFov = 1.0
-            local maxFov = 80.0
+            FreezeEntityPosition(ped, true)
+            SetEntityCoords(ped, v.camCoords.x, v.camCoords.y, v.camCoords.z, 0.0, 0.0, 0.0, false)
+            SetEntityAlpha(ped, 0.0, -1)
+
+            local cam = setupCamera(v.camCoords, v.camHeading, v.maxFov / 1.7)
+            local horizontal, vertical = 0, -7.5
+            local fov = v.maxFov / 1.7
+            local minFov, maxFov = v.minFov, v.maxFov
             menuOpen = false
             SetNuiFocus(false, false)
-            local cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
-            SetTimecycleModifier("CAMERA_secuirity_FUZZ")
-            SetTimecycleModifierStrength(0.8)
-            SetCamCoord(cam, camCoords.x, camCoords.y, camCoords.z - 0.25)
-            SetCamFov(cam, fov)
-            SetCamRot(cam, -7.5, 0.0, camHorizontalHeading, 2) 
-            RenderScriptCams(true, false, 0, true, true)
-            
-            DisplayHud(false)
-            DisplayRadar(false)
 
-            local horizontal = 0
-            local vertikal = -7.5
             while true do
                 if IsControlPressed(0, 34) then -- links
-                    horizontal = horizontal +fov / 100
+                    horizontal = math.min(35.0, horizontal + fov / 100)
+                elseif IsControlPressed(0, 9) then -- rechts
+                    horizontal = math.max(-35.0, horizontal - fov / 100)
+                end
 
-                    if horizontal > 35 then horizontal = 35.0 end
-                    if horizontal < -35 then horizontal = -35.0 end
-                    SetCamRot(cam, vertikal, 0.0, camHorizontalHeading + horizontal)
-                end
-                if IsControlPressed(0, 9) then -- rechts
-                    horizontal = horizontal - fov / 100
-                    if horizontal > 35 then horizontal = 35.0 end
-                    if horizontal < -35 then horizontal = -35.0 end
-                    SetCamRot(cam, vertikal, 0.0, camHorizontalHeading + horizontal)
-                end
-                if IsControlPressed(0, 8) then -- nach unten
-                    vertikal = vertikal - fov / 100
-                    if vertikal > 10.0 then vertikal = 10.0 end
-                    if vertikal < -50.0 then vertikal = -50.0 end
-                    SetCamRot(cam, vertikal, 0, camHorizontalHeading + horizontal)
-                end
                 if IsControlPressed(0, 32) then -- nach oben
-                    vertikal = vertikal + fov / 100
+                    vertical = math.min(10.0, vertical + fov / 100)
+                elseif IsControlPressed(0, 8) then -- nach unten
+                    vertical = math.max(-50.0, vertical - fov / 100)
+                end
 
-                    if vertikal > 10.0 then vertikal = 10.0 end
-                    if vertikal < -50.0 then vertikal = -50.0 end
-                    SetCamRot(cam, vertikal, 0.0, camHorizontalHeading + horizontal)
-                end
                 if IsControlPressed(0, 17) then
-                    fov = fov - 5
-                    if fov < minFov then fov = minFov end
-                    if fov > maxFov then fov = maxFov end
-                    SetCamFov(cam, fov)
+                    fov = math.max(minFov, fov - 5)
+                elseif IsControlPressed(0, 16) then
+                    fov = math.min(maxFov, fov + 5)
                 end
-                if IsControlPressed(0, 16) then
-                    fov = fov + 5
-                    if fov > maxFov then fov = maxFov end
-                    if fov < minFov then fov = minFov end
-                    SetCamFov(cam, fov)
+
+                SetCamRot(cam, vertical, 0.0, v.camHeading + horizontal)
+                SetCamFov(cam, fov)
+                DisableControlAction(0, 200, true) 
+
+                DisableControlAction(0, 200, true)
+                if IsControlJustPressed(0, 202) then
+                    TriggerServerEvent('videoRecordingCameras:requestCamerasPermission')
+                    FreezeEntityPosition(ped, false)
+                    SetEntityCoords(ped, oldCoords)
+                    SetEntityAlpha(ped, 255, false)
+                    SetTimecycleModifierStrength(0.0)
+                    menuOpen = true
+                    SetNuiFocus(true, true)
+                    SendNUIMessage({action = "open"})
+                    resetCamera()
                 end
-                Citizen.Wait()
+
+                Citizen.Wait(0)
             end
         end
     end
@@ -159,5 +171,6 @@ AddEventHandler('videoRecordingCameras:requestCamerasPermission', function(camer
     for k,v in pairs(cameras) do
         cameras[k].cameras.location = GetStreetNameFromHashKey(GetStreetNameAtCoord(cameras[k].cameras.coords.x, cameras[k].cameras.coords.y, cameras[k].cameras.coords.z))
     end
+    Citizen.Wait(500)
     SendNUIMessage({cameras = cameras, locales = {Locales.MenuHeader, Locales.MenuDescription}})
 end)    
