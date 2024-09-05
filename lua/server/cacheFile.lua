@@ -14,8 +14,21 @@ Citizen.CreateThread(function()
 				heading = v.camHeading,
 				index = #file + 1
 			})
+		else
+			for k_, v_ in pairs(file) do
+				if v_.id == v.id then
+					v_.coords = v.camCoords
+					v_.title = v.title
+					v_.description = v.description
+					v_.minFov = v.minFov
+					v_.maxFov = v.maxFov
+					v_.heading = v.camHeading
+				end
+			end
 		end
 	end
+
+	tprint(file)
 
 	SaveResourceFile(GetCurrentResourceName(), "cache/videoPaths.json", json.encode(file), -1)
 

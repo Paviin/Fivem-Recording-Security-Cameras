@@ -9,19 +9,17 @@ local function updatePlayerCoords()
     playerCoords = GetEntityCoords(playerPed)
 end
 
-local function calculateDistance(pointA, pointB)
-    return #(pointA - pointB)
-end
-
 local function findNearestCam()
     nearestCamDistance = Config.Distance + 1
     nearestCamCoords = nil
 
     for _, cam in pairs(Config.Cams) do
-        local camDistance = calculateDistance(playerCoords, cam.controlPoint)
-        if camDistance < nearestCamDistance then
-            nearestCamDistance = camDistance
-            nearestCamCoords = cam.controlPoint
+        if cam.controlPoint then
+            local camDistance = #(playerCoords - cam.controlPoint)
+            if camDistance < nearestCamDistance then
+                nearestCamDistance = camDistance
+                nearestCamCoords = cam.controlPoint
+            end
         end
     end
 end
@@ -140,7 +138,6 @@ RegisterNUICallback('watchCam', function(id)
                 SetCamFov(cam, fov)
                 DisableControlAction(0, 200, true) 
 
-                DisableControlAction(0, 200, true)
                 if IsControlJustPressed(0, 202) then
                     TriggerServerEvent('videoRecordingCameras:requestCamerasPermission')
                     FreezeEntityPosition(ped, false)
@@ -151,6 +148,7 @@ RegisterNUICallback('watchCam', function(id)
                     SetNuiFocus(true, true)
                     SendNUIMessage({action = "open"})
                     resetCamera()
+                    break
                 end
 
                 Citizen.Wait(0)

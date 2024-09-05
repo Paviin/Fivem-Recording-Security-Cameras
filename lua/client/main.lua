@@ -49,7 +49,3 @@ end)
 Citizen.CreateThread(function()
   TriggerServerEvent('videoRecordingCameras:requestCamerasPermission')
 end)
-
-RegisterNUICallback('close', function()
-  SetNuiFocus(false, false)
-end)

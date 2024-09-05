@@ -88,6 +88,8 @@ local function collectPedData(ped)
     local pedCoords = GetEntityCoords(ped)
     local weapon = GetSelectedPedWeapon(ped)
 
+    local isPlayer = IsPedAPlayer(ped)
+
     return {
         type = 'ped',
         pedId = PedToNet(ped),
@@ -103,7 +105,8 @@ local function collectPedData(ped)
         isInMeleeCombat = IsPedInMeleeCombat(ped),
         isDucking = IsPedDucking(ped),
         isReloading = IsPedReloading(ped),
-        isRagdoll = IsPedRagdoll(ped)
+        isRagdoll = IsPedRagdoll(ped),
+        isPlayer = isPlayer  -- Füge Information hinzu, ob es ein echter Spieler ist
     }
 end
 
@@ -255,8 +258,11 @@ local function createPed(data)
 end
 
 local function createVehicle(data)
-    local vehicle = CreateVehicle(data.model, data.coords.x, data.coords.y, data.coords.z, data.heading, true, false)
-    SetVehicleOnGroundProperly(vehicle)
+    local vehicle = CreateVehicle(data.model, data.coords.x, data.coords.y, data.coords.z, data.heading, false, false)
+    local zCoord = GetGroundZFor_3dCoord(data.coords.x, data.coords.y, data.coords.z, true)
+    if math.abs( zCoord - data.coords.z ) < 1.5 then
+        SetVehicleOnGroundProperly(vehicle)
+    end
     SetVehicleColours(vehicle, data.colorPrimary, data.colorSecondary)
     SetVehicleNumberPlateText(vehicle, data.plate)
     SetVehicleEngineOn(vehicle, data.isEngineRunning, true, false)
@@ -264,7 +270,7 @@ local function createVehicle(data)
     SetVehicleFuelLevel(vehicle, data.fuelLevel)
     SetEntityAsMissionEntity(vehicle, true, true)
     
-    local ped = CreatePedInsideVehicle(vehicle, 4, GetHashKey("a_m_y_stbla_01"), -1, true, false)
+    local ped = CreatePedInsideVehicle(vehicle, 4, GetHashKey("a_m_y_stbla_01"), -1, false, false)
     
     SetPedFleeAttributes(ped, 2, false)  
     SetPedCombatAttributes(ped, 46, true)
@@ -327,6 +333,7 @@ local function handleVehiclePlayback(vehicle, data)
     end
 
     SetEntityCoords(vehicle, data.coords.x, data.coords.y, data.coords.z)
+    FreezeEntityPosition(vehicle, true)
     SetEntityHeading(vehicle, data.heading)
     SetVehicleOnGroundProperly(vehicle)
 
@@ -339,12 +346,20 @@ local function handleVehiclePlayback(vehicle, data)
     end
 end
 
+local deletedVehicles = {}
+
 RegisterNetEvent('clientDeleteVehicle')
 AddEventHandler('clientDeleteVehicle', function(vehicleNetId)
     local vehicle = NetToVeh(vehicleNetId)
     if DoesEntityExist(vehicle) then
         SetEntityAlpha(vehicle, 0)
         SetEntityVisible(vehicle, false, false)
+        
+        for _, spawnedVehicle in pairs(spawnedVehicles) do
+            SetEntityNoCollisionEntity(vehicle, spawnedVehicle, true)
+        end
+
+        table.insert(deletedVehicles, vehicle)
     end
 end)
 
@@ -444,6 +459,25 @@ function watchVideo(file, infoFile)
         SetTimecycleModifier("None")
         menuOpen = false
         playbackRecording = false
+
+        for _, spawnedVehicle in pairs(spawnedVehicles) do
+            SetEntityAsMissionEntity(spawnedVehicle)
+            DeleteEntity(spawnedVehicle)
+        end
+
+        for _, spawnedPed in pairs(spawnedPeds) do
+            SetEntityAsMissionEntity(spawnedPed)
+            DeleteEntity(spawnedPed)
+        end
+
+        for _, deletedVehicle in pairs(deletedVehicles) do
+            SetEntityAlpha(deletedVehicle, 255, true)
+            SetEntityVisible(deletedVehicle, true, true)
+            
+            for _, spawnedVehicle in pairs(spawnedVehicles) do
+                SetEntityNoCollisionEntity(deletedVehicle, spawnedVehicle, true)
+            end
+        end
     end)
 
 

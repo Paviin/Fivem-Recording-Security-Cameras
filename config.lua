@@ -28,8 +28,8 @@ Config.Cams = {
         id  = 1,
         title = "Police Cam",
         description = "Police Cam 1",
-        controlPoint = vector3(189.6041, 301.7457, 105.477),
-        camCoords = vector3(226.0677, 381.9196, 110.4175), 
+        controlPoint = vector3(178.7876, 383.3642, 108.9205),
+        camCoords = vector3(227.0677, 381.9196, 110.4175), 
         camHeading = 90.0, 
         minFov = 1.0,
         maxFov = 50.0,
@@ -91,6 +91,7 @@ Config.Cams = {
         obj = "prop_cctv_cam_05a", 
         minCamHeightFov = 20,
         maxCamHeightFov = 10,
+        
         permissions = {
             jobs = {
                 {

@@ -1,6 +1,7 @@
 let cameras = {};
 let locales = {};
 let inRecordingMenu = false;
+let inMenu          = false;
 
 $(document).ready(function () {
     window.addEventListener('message', function (event) {
@@ -21,6 +22,7 @@ $(document).ready(function () {
         switch (data.action) {
             case 'open':
                 $(document.body).fadeIn(125)
+                inMenu = true;                
                 break;
             case 'close':
                 $(document.body).fadeOut(125)
@@ -60,12 +62,11 @@ const openMenu = () => {
 
 const watchCam = (id) => {        
     post("watchCam", id)
+    inMenu  = false;
     cameras = {};
     videos  = {}; 
     document.body.style.display = "none"
 }
-
-
 
 const watchRecording = (camera, video) => {        
     camera++;
@@ -74,6 +75,7 @@ const watchRecording = (camera, video) => {
     $.post(`https://${GetParentResourceName()}/watchRecording`, JSON.stringify(x), function (msg) {});
     cameras = {};
     videos  = {}; 
+    inMenu  = false;
     document.body.style.display = "none"
 }
 
@@ -108,30 +110,22 @@ const closeMenu = () => {
     }
     cameras = {};
     videos  = {}; 
+    inMenu = false;    
     document.body.style.display = "none"
     post("close")
 }
 
 document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        post("close")
-        cameras = {};
-        videos  = {}; 
-        document.body.style.display = "none"
+    if (event.key === 'Escape' && inMenu) {        
+        closeMenu()
     }
 
-    if (event.key === 'Delete') {
-        post("close")
-        cameras = {};
-        videos  = {}; 
-        document.body.style.display = "none"
+    if (event.key === 'Delete' && inMenu) {
+        closeMenu()
     }
 
-    if (event.key === 'Backspace') {
-        post("close")
-        cameras = {};
-        videos  = {}; 
-        document.body.style.display = "none"
+    if (event.key === 'Backspace' && inMenu) {
+        closeMenu()
     }
 });
 
