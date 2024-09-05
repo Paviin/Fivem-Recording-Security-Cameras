@@ -20,32 +20,36 @@ AddEventHandler('videoRecordingCameras:watchVideo', function(file, infoFile)
 end)
 
 function tprint (tbl, indent)
-	if not indent then indent = 0 end
-	for k, v in pairs(tbl) do
-	  formatting = string.rep("  ", indent) .. k .. ": "
-	  if type(v) == "table" then
-		print(formatting)
-		tprint(v, indent+1)
-	  elseif type(v) == 'boolean' then
-		print(formatting .. tostring(v))      
-	  else
-		print(formatting .. v)
-	  end
-	end
-  end
-
-  CreateCamObj = function(camCoords, camHeading, obj)
-    local x, y, z = table.unpack(camCoords)
-    cam = CreateObject(GetHashKey(obj), x, y, z, false, false, true)
-    SetEntityHeading(cam, camHeading - 180)
-  end
-
-  AddEventHandler('onResourceStop', function()
-    if cam then
-        DeleteObject(cam)
+  if not indent then indent = 0 end
+    for k, v in pairs(tbl) do
+      formatting = string.rep("  ", indent) .. k .. ": "
+      if type(v) == "table" then
+      print(formatting)
+      tprint(v, indent+1)
+      elseif type(v) == 'boolean' then
+      print(formatting .. tostring(v))      
+      else
+      print(formatting .. v)
+      end
     end
-  end)
+end
 
-  Citizen.CreateThread(function()
-    TriggerServerEvent('videoRecordingCameras:requestCamerasPermission')
-  end)
+CreateCamObj = function(camCoords, camHeading, obj)
+  local x, y, z = table.unpack(camCoords)
+  cam = CreateObject(GetHashKey(obj), x, y, z, false, false, true)
+  SetEntityHeading(cam, camHeading - 180)
+end 
+
+AddEventHandler('onResourceStop', function()
+  if cam then
+      DeleteObject(cam)
+  end
+end)
+
+Citizen.CreateThread(function()
+  TriggerServerEvent('videoRecordingCameras:requestCamerasPermission')
+end)
+
+RegisterNUICallback('close', function()
+  SetNuiFocus(false, false)
+end)

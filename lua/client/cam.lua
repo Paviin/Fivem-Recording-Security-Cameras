@@ -201,14 +201,14 @@ Citizen.CreateThread(function()
                 cam.recordingThread = Citizen.CreateThread(function()
                     while cam.recordingThreadActive do
 
-                        if not isEntityVisibleToCamera(cam.coords, PlayerPedId()) then
+                        --[[if not isEntityVisibleToCamera(cam.coords, PlayerPedId()) then
                             print("Entität nicht sichtbar, Aufnahme wird gestoppt und gespeichert")
                             cam.recordingThreadActive = false
                             break
-                        end
+                        end]]
 
                         if #recordedData >= 500 then
-                            TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.maxFov)
+                            TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.minFov, cam.maxFov)
                             recordedData = {}
                         else
                             collectDataInZone()
@@ -217,7 +217,7 @@ Citizen.CreateThread(function()
                     end
                     
                     if not cam.recordingThreadActive and #recordedData > 5 then
-                        TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.maxFov)
+                        TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.minFov, cam.maxFov)
                         recordedData = {}
                     end
                 end)
@@ -226,7 +226,7 @@ Citizen.CreateThread(function()
                     cam.recordingThreadActive = false
                 end
                 if #recordedData > 1 then
-                    TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.maxFov)
+                    TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.minFov, cam.maxFov)
                 end
                 recordedData = {}
             end
@@ -299,6 +299,7 @@ local function handlePedPlayback(ped, data)
     end
 
     SetEntityCoords(ped, data.coords.x, data.coords.y, data.coords.z - 1.0)
+    FreezeEntityPosition(ped, true)
     TaskPlayAnim(ped, "move_m@brave", "walk", 8.0, -8.0, -1, 1, 0, false, false, false)
     SetEntityHeading(ped, data.heading)
 

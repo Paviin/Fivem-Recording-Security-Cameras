@@ -112,6 +112,29 @@ const closeMenu = () => {
     post("close")
 }
 
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        post("close")
+        cameras = {};
+        videos  = {}; 
+        document.body.style.display = "none"
+    }
+
+    if (event.key === 'Delete') {
+        post("close")
+        cameras = {};
+        videos  = {}; 
+        document.body.style.display = "none"
+    }
+
+    if (event.key === 'Backspace') {
+        post("close")
+        cameras = {};
+        videos  = {}; 
+        document.body.style.display = "none"
+    }
+});
+
 const post = (point, ...data) => {
     $.post(`https://${GetParentResourceName()}/${point}`, JSON.stringify(...data), function (msg) {});
 }

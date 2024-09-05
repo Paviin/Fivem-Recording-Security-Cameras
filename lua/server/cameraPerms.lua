@@ -6,7 +6,6 @@ AddEventHandler('videoRecordingCameras:requestCamerasPermission', function()
     local resourceName = GetCurrentResourceName()
     local files = json.decode(LoadResourceFile(resourceName, "cache/videoPaths.json"))
 
-
     local function isCameraAlreadyAdded(cam)
         for _, v in pairs(cameras) do
             if v.cameras.id == cam then

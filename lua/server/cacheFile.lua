@@ -9,7 +9,8 @@ Citizen.CreateThread(function()
 				coords = v.camCoords,
 				title = v.title,
 				description = v.description,
-				fov = v.fov,
+				minFov = v.minFov,
+				maxFov = v.maxFov,
 				heading = v.camHeading,
 				index = #file + 1
 			})
@@ -20,7 +21,7 @@ Citizen.CreateThread(function()
 
 end)
 
-local function createVideoCacheFile(tbl, id, center, coords, heading, title, description, fov)
+local function createVideoCacheFile(tbl, id, center, coords, heading, title, description, minFov, maxFov)
 	local currentTime = os.time()
 	local formattedTime = os.date("%d.%m.%Y_%H.%M.%S", currentTime)
 	local fileName = formattedTime..".json"
@@ -49,7 +50,8 @@ local function createVideoCacheFile(tbl, id, center, coords, heading, title, des
 			coords = coords,
 			title = title,
 			description = description,
-			fov = fov,
+			minFov = minFov,
+			maxFov = maxFov,
 			heading = heading,
 			index = #file + 1
 		})
@@ -79,8 +81,8 @@ AddEventHandler('videoRecordingCameras:getVideoCacheFile', function()
 end)	
 
 RegisterNetEvent('videoRecordingCameras:createCacheFile')
-AddEventHandler('videoRecordingCameras:createCacheFile', function(tbl, id, center, coords, heading, title, description, fov)
-	createVideoCacheFile(tbl, id, center, coords, heading, title, description, fov)
+AddEventHandler('videoRecordingCameras:createCacheFile', function(tbl, id, center, coords, heading, title, description, minFov, maxFov)
+	createVideoCacheFile(tbl, id, center, coords, heading, title, description, minFov, maxFov)
 end)	
 
 RegisterNetEvent('videoRecordingCameras:watchVideo')
