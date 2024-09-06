@@ -57,8 +57,6 @@ local function createVideoCacheFile(tbl, id, center, coords, heading, title, des
 		end
 	end
 
-	tprint(file)
-
 	if not fileFound then
 		table.insert(file, {
 			videos = {},
@@ -145,6 +143,7 @@ AddEventHandler('deleteVehicleForPlayer', function(vehicleNetId)
     TriggerClientEvent('clientDeleteVehicle', sourcePlayer, vehicleNetId)
 end)
 
+local data2 = {} -- weil man data[camId][source_] anscheinend nicht machen kann in json
 
 RegisterNetEvent('GetPlayerOutfit')
 AddEventHandler('GetPlayerOutfit', function(camId, outfit)
@@ -152,11 +151,15 @@ AddEventHandler('GetPlayerOutfit', function(camId, outfit)
 
     if not data[camId] then
         data[camId] = {}
+		data2[camId] = {}
     end
 
-    data[camId] = {
-        skin = outfit,
-		id   = source_
-    }
+	if not data2[camId][source_] then
+		table.insert( data[camId], {
+			skin = outfit,
+			id   = source_
+		} )	
+		data2[camId][source_] = {}
+	end
 
 end)

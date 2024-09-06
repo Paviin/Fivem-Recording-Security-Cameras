@@ -269,8 +269,10 @@ local function createPed(data, infoFile, fileName)
 
     for k,v in pairs(infoFile.skins) do
         if v[fileName] then
-            if data.playerServerId == v[fileName].id then
-                ApplySkin(ped, v[fileName].skin)
+            for k_,v_ in pairs(v[fileName]) do
+                if data.playerServerId == v_.id then
+                    ApplySkin(ped, v_.skin)
+                end
             end
         end
     end
