@@ -1,7 +1,7 @@
 
 Config = {}
 
-Config.Debug = true
+Config.Debug = false
 
 Config.Distance = 20.0
 

@@ -84,11 +84,19 @@ local function isEntityVisibleToCamera(camCoords, entity)
     return hit and (entityHit == entity or entityHit == 0)
 end
 
-local function collectPedData(ped)
+local function collectPedData(ped, camId)
     local pedCoords = GetEntityCoords(ped)
     local weapon = GetSelectedPedWeapon(ped)
+    local playerServerId = -1
 
-    local isPlayer = IsPedAPlayer(ped)
+    -- Um das Outfit des Spielers zu bekommen
+    if IsPedAPlayer(ped) and camId then
+        TriggerEvent('skinchanger:getSkin', function(outfit)
+            TriggerServerEvent('GetPlayerOutfit', camId, outfit)
+        end)
+
+        playerServerId = GetPlayerServerId(NetworkGetPlayerIndexFromPed(ped))
+    end
 
     return {
         type = 'ped',
@@ -106,7 +114,7 @@ local function collectPedData(ped)
         isDucking = IsPedDucking(ped),
         isReloading = IsPedReloading(ped),
         isRagdoll = IsPedRagdoll(ped),
-        isPlayer = isPlayer  -- Füge Information hinzu, ob es ein echter Spieler ist
+        playerServerId = playerServerId
     }
 end
 
@@ -172,7 +180,7 @@ local function collectDataInZone()
             if DoesEntityExist(ped) and cam.zone:isPointInside(GetEntityCoords(ped)) and isEntityVisibleToCamera(cam.coords, ped) and GetVehiclePedIsIn(ped, false) == 0 then
                 entitiesInZone[ped] = true
 
-                table.insert(recordedData, collectPedData(ped))
+                table.insert(recordedData, collectPedData(ped, cam.id))
             end
         end
 
@@ -251,8 +259,21 @@ RegisterCommand('aufnahme', function()
     watchVideo(recordedData)
 end)
 
-local function createPed(data)
-    local ped = CreatePed(4, GetHashKey("a_m_y_stbla_01"), data.coords.x, data.coords.y, data.coords.z, data.heading, false, false)
+local function createPed(data, infoFile, fileName)
+    local model = GetHashKey("mp_m_freemode_01")
+    RequestModel(model)
+    while not HasModelLoaded(model) do
+        Wait(100)
+    end
+    local ped = CreatePed(4, GetHashKey("mp_m_freemode_01"), data.coords.x, data.coords.y, data.coords.z, data.heading, false, false)
+
+    for k,v in pairs(infoFile.skins) do
+        if v[fileName] then
+            if data.playerServerId == v[fileName].id then
+                ApplySkin(ped, v[fileName].skin)
+            end
+        end
+    end
     spawnedPeds[data.pedId] = ped
     return ped
 end
@@ -409,7 +430,7 @@ local function removeNonRecordedEntities()
     end)
 end
 
-function watchVideo(file, infoFile)
+function watchVideo(file, infoFile, fileName)
     playbackRecording = true
     SetNuiFocus(false, false)
 
@@ -418,6 +439,12 @@ function watchVideo(file, infoFile)
         print("No recorded data available.")
         return
     end
+
+    local ped = PlayerPedId()
+    local oldCoords = GetEntityCoords(ped)
+    FreezeEntityPosition(ped, true)
+    SetEntityCoords(ped, infoFile.coords.x, infoFile.coords.y, infoFile.coords.z, 0.0, 0.0, 0.0, false)
+    SetEntityAlpha(ped, 0.0, -1)
 
     local modelsToRequest = { "a_m_y_stbla_01", "a_m_y_beach_02" }
     requestModels(modelsToRequest)
@@ -442,18 +469,22 @@ function watchVideo(file, infoFile)
         while playbackRecording and index <= #file do
             local data = file[index]
             if data.type == 'ped' then
-                local ped = spawnedPeds[data.pedId] or createPed(data)
+                local ped = spawnedPeds[data.pedId] or createPed(data, infoFile, fileName)
                 handlePedPlayback(ped, data)
             elseif data.type == 'vehicle' then
                 local vehicle = spawnedVehicles[data.plate] or createVehicle(data)
                 handleVehiclePlayback(vehicle, data)
             end
             index = index + 1
-            local adjustedWaitTime = 1000 / (#file / 20) 
+            local adjustedWaitTime = 1000 / (#file / 15) 
             Citizen.Wait(math.max(adjustedWaitTime, 100))
         end
 
         RenderScriptCams(false, false, 0, true, true)
+        FreezeEntityPosition(ped, false)
+        SetEntityCoords(ped, oldCoords)
+        SetEntityAlpha(ped, 255, false)
+        SetTimecycleModifierStrength(0.0)
         DisplayHud(true)
         DisplayRadar(true)
         SetTimecycleModifier("None")
@@ -507,4 +538,22 @@ function watchVideo(file, infoFile)
             Citizen.Wait(0)
         end
     end)
+end
+
+local LastSex     = -1
+local LoadSkin    = nil
+local LoadClothes = nil
+local Character   = {}
+
+function ApplySkin(ped, skin)
+
+    SetPedHeadBlendData(ped, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, true)
+    SetPedHairColor(ped, skin.hair_color_1, skin.hair_color_2)
+    SetPedComponentVariation(ped, 2, skin.hair_1, skin.hair_2, 2)
+
+    SetPedComponentVariation(ped, 2, skin.hair_1 or 0, skin.hair_2 or 0, 2) -- Haare
+    SetPedComponentVariation(ped, 8, skin['tshirt_1'] or 0, skin['tshirt_2'] or 0, 2) -- T-Shirt
+    SetPedComponentVariation(ped, 11, skin['torso_1'] or 0, skin['torso_2'] or 0, 2) -- Oberkörper
+    SetPedComponentVariation(ped, 4, skin['pants_1'] or 0, skin['pants_2'] or 0, 2) -- Hose
+    
 end

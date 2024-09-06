@@ -1,3 +1,5 @@
+local data = {}
+
 Citizen.CreateThread(function()
 	local file = json.decode(LoadResourceFile(GetCurrentResourceName(), "cache/videoPaths.json"))
 
@@ -5,6 +7,7 @@ Citizen.CreateThread(function()
 		if not file[k] then
 			table.insert(file, {
 				videos = {},
+				skins = {},
 				id = v.id,
 				coords = v.camCoords,
 				title = v.title,
@@ -28,13 +31,11 @@ Citizen.CreateThread(function()
 		end
 	end
 
-	tprint(file)
-
 	SaveResourceFile(GetCurrentResourceName(), "cache/videoPaths.json", json.encode(file), -1)
 
 end)
 
-local function createVideoCacheFile(tbl, id, center, coords, heading, title, description, minFov, maxFov)
+local function createVideoCacheFile(tbl, id, center, coords, heading, title, description, minFov, maxFov, skins)
 	local currentTime = os.time()
 	local formattedTime = os.date("%d.%m.%Y_%H.%M.%S", currentTime)
 	local fileName = formattedTime..".json"
@@ -52,12 +53,16 @@ local function createVideoCacheFile(tbl, id, center, coords, heading, title, des
 		if v.id == id then
 			fileFound = true
 			table.insert(file[k].videos, fileName)
+			table.insert(file[k].skins, {[fileName] = data[id]})
 		end
 	end
+
+	tprint(file)
 
 	if not fileFound then
 		table.insert(file, {
 			videos = {},
+			skins = {},
 			id = id,
 			center = center,
 			coords = coords,
@@ -94,8 +99,8 @@ AddEventHandler('videoRecordingCameras:getVideoCacheFile', function()
 end)	
 
 RegisterNetEvent('videoRecordingCameras:createCacheFile')
-AddEventHandler('videoRecordingCameras:createCacheFile', function(tbl, id, center, coords, heading, title, description, minFov, maxFov)
-	createVideoCacheFile(tbl, id, center, coords, heading, title, description, minFov, maxFov)
+AddEventHandler('videoRecordingCameras:createCacheFile', function(tbl, id, center, coords, heading, title, description, minFov, maxFov, skins)
+	createVideoCacheFile(tbl, id, center, coords, heading, title, description, minFov, maxFov, skins)
 end)	
 
 RegisterNetEvent('videoRecordingCameras:watchVideo')
@@ -103,17 +108,19 @@ AddEventHandler('videoRecordingCameras:watchVideo', function(camIndex, videoInde
 	local resourceName = GetCurrentResourceName()
 	local file = getVideoCacheFile()
 	local video
+	local fileName
 	for k,v in pairs(file) do
 		if v.id == camIndex then
 			file = v
 			for k_, v_ in pairs(v.videos) do
 				if k_ == videoIndex then
+					fileName = v_
 					video = LoadResourceFile(GetCurrentResourceName(), "cache/videos/"..v_)
 				end
 			end
 		end
 	end
-	TriggerClientEvent('videoRecordingCameras:watchVideo', source, video, file) -- @file = infoFile
+	TriggerClientEvent('videoRecordingCameras:watchVideo', source, video, file, fileName) -- @file = infoFile
 end)
 
 function tprint (tbl, indent)
@@ -136,4 +143,20 @@ RegisterNetEvent('deleteVehicleForPlayer')
 AddEventHandler('deleteVehicleForPlayer', function(vehicleNetId)
     local sourcePlayer = source
     TriggerClientEvent('clientDeleteVehicle', sourcePlayer, vehicleNetId)
+end)
+
+
+RegisterNetEvent('GetPlayerOutfit')
+AddEventHandler('GetPlayerOutfit', function(camId, outfit)
+    local source_ = source
+
+    if not data[camId] then
+        data[camId] = {}
+    end
+
+    data[camId] = {
+        skin = outfit,
+		id   = source_
+    }
+
 end)

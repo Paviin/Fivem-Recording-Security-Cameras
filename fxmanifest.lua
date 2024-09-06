@@ -26,7 +26,8 @@ server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'PolyZone/server.lua',
     'lua/server/cacheFile.lua',
-    'lua/Server/cameraPerms.lua'
+    'lua/server/cameraPerms.lua',
+    'lua/server/getOutfit.lua'
 }
 
 ui_page 'html/index.html'
