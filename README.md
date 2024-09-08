@@ -1,3 +1,2 @@
 ## todo:
-  - Checken, ob das Auto auch nur lokal unsichtbar ist und nicht für jeden Spieler
-  - Das Ped soll den gleichen Skin annehmen, bzw der Spieler
+ - Checken, ob er Spieler das Auto verlassen hat, wenn ja soll er das ped löschen (im Auto) und draußen eins erstellen

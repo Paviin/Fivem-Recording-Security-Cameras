@@ -1,13 +1,16 @@
 RegisterNetEvent('videoRecordingCameras:requestCamerasPermission')
 AddEventHandler('videoRecordingCameras:requestCamerasPermission', function()
-    local identifiers = {}
-    local cameras     = {}
+    local cameras = {}
     local source_ = source
     local resourceName = GetCurrentResourceName()
     local files = json.decode(LoadResourceFile(resourceName, "cache/videoPaths.json"))
 
+    local playerIdentifiers = GetPlayerIdentifiers(source_)
+    local validIdentifiers = {}
+    local validJobs = {}
+
     local function isCameraAlreadyAdded(cam)
-        for _, v in pairs(cameras) do
+        for _, v in ipairs(cameras) do
             if v.cameras.id == cam then
                 return true
             end
@@ -15,30 +18,31 @@ AddEventHandler('videoRecordingCameras:requestCamerasPermission', function()
         return false
     end
 
-    for k,v in pairs(GetPlayerIdentifiers(source_)) do
-        local match_
-        if string.sub(v, 1, string.len("steam:")) == "steam:" then
-            match_ = string.match(v, ":(%w+)")
-        elseif string.sub(v, 1, string.len("license:")) == "license:" then
-            match_ = string.match(v, ":(%w+)")
-        elseif string.sub(v, 1, string.len("xbl:")) == "xbl:" then
-            match_ = string.match(v, ":(%w+)")
-        elseif string.sub(v, 1, string.len("ip:")) == "ip:" then
-            match_ = string.match(v, ":(%w+)")
-        elseif string.sub(v, 1, string.len("discord:")) == "discord:" then
-            match_ = string.match(v, ":(%w+)")
-        elseif string.sub(v, 1, string.len("live:")) == "live:" then
-            match_ = string.match(v, ":(%w+)")
-        end
+    local function checkIdentifiers()
+        for _, id in ipairs(playerIdentifiers) do
+            local match_
+            if string.sub(id, 1, string.len("steam:")) == "steam:" then
+                match_ = string.match(id, ":(%w+)")
+            elseif string.sub(id, 1, string.len("license:")) == "license:" then
+                match_ = string.match(id, ":(%w+)")
+            elseif string.sub(id, 1, string.len("xbl:")) == "xbl:" then
+                match_ = string.match(id, ":(%w+)")
+            elseif string.sub(id, 1, string.len("ip:")) == "ip:" then
+                match_ = string.match(id, ":(%w+)")
+            elseif string.sub(id, 1, string.len("discord:")) == "discord:" then
+                match_ = string.match(id, ":(%w+)")
+            elseif string.sub(id, 1, string.len("live:")) == "live:" then
+                match_ = string.match(id, ":(%w+)")
+            end
 
-        for k_,v_ in pairs(Config.Cams) do
-            for k__,v__ in pairs(v_.permissions.identifiers) do
-                local match = string.match(v__.identifier, ":(%w+)")
-                if match == match_ then
-                    if not isCameraAlreadyAdded(v_.id) then
-                        for k___, v___ in pairs(files) do
-                            if v___.id == v_.id then
-                                table.insert(cameras, {cameras = v___})
+            if match_ then
+                for _, cam in ipairs(Config.Cams) do
+                    for _, perm in ipairs(cam.permissions.identifiers) do
+                        local identifier = perm.identifier or ""
+                        if identifier ~= "" then
+                            local permMatch = string.match(identifier, ":(%w+)")
+                            if permMatch == match_ then
+                                validIdentifiers[cam.id] = true
                             end
                         end
                     end
@@ -47,68 +51,77 @@ AddEventHandler('videoRecordingCameras:requestCamerasPermission', function()
         end
     end
 
-    local jobs_count = 0
-    local jobs_total = 0
+    local function checkJobs()
+        local jobs_count = 0
+        local jobs_total = 0
 
-    for k,v in pairs(Config.Cams) do
-        jobs_total = jobs_total + #v.permissions.jobs
-    end
+        for _, cam in ipairs(Config.Cams) do
+            jobs_total = jobs_total + #cam.permissions.jobs
+        end
 
-    for k,v in pairs(Config.Cams) do
-        for k_,v_ in pairs(v.permissions.jobs) do
-            MySQL.Async.fetchAll(Config.JobsTableQuery, { ["@job"] = v_.name }, function(result)
-                for k__,v__ in pairs(result) do
-                    local match = string.match(v__.identifier, ":(%w+)")
-                    local match_ = false
-
-                    for k___,v___ in pairs(GetPlayerIdentifiers(source_)) do
-                        if string.sub(v___, 1, string.len("steam:")) == "steam:" then
-                            if not match_ then
-                                match_ = string.match(v___, ":(%w+)") == match
-                            end
-                        elseif string.sub(v___, 1, string.len("license:")) == "license:" then
-                            if not match_ then
-                                match_ = string.match(v___, ":(%w+)") == match
-                            end
-                        elseif string.sub(v___, 1, string.len("xbl:")) == "xbl:" then
-                            if not match_ then
-                                match_ = string.match(v___, ":(%w+)") == match
-                            end
-                        elseif string.sub(v___, 1, string.len("ip:")) == "ip:" then
-                            if not match_ then
-                                match_ = string.match(v___, ":(%w+)") == match
-                            end
-                        elseif string.sub(v___, 1, string.len("discord:")) == "discord:" then
-                            if not match_ then
-                                match_ = string.match(v___, ":(%w+)") == match
-                            end
-                        elseif string.sub(v___, 1, string.len("live:")) == "live:" then
-                            if not match_ then
-                                match_ = string.match(v___, ":(%w+)") == match
-                            end
-                        end
-
-                        
+        local function processJobResult(camId, result)
+            local valid = false
+            for _, job in ipairs(result) do
+                local match = string.match(job.identifier, ":(%w+)")
+                for _, id in ipairs(playerIdentifiers) do
+                    local playerMatch = string.match(id, ":(%w+)")
+                    if playerMatch == match then
+                        valid = true
+                        break
                     end
-                    if match_ then
-                        if not isCameraAlreadyAdded(v.id) then
-                            for k_____, v_____ in pairs(files) do
-                                if v_____.id == v.id then
-                                    table.insert(cameras, {cameras = v_____})
+                end
+                if valid then break end
+            end
+
+            if valid then
+                validJobs[camId] = true
+            end
+
+            jobs_count = jobs_count + 1
+            if jobs_count == jobs_total then
+                for _, cam in ipairs(Config.Cams) do
+                    local emptyPermissions = true
+                    for _, perm in ipairs(cam.permissions.jobs) do
+                        if perm.name ~= "" then
+                            emptyPermissions = false
+                            break
+                        end
+                    end
+                    for _, perm in ipairs(cam.permissions.identifiers) do
+                        if perm.identifier ~= "" then
+                            emptyPermissions = false
+                            break
+                        end
+                    end
+
+                    if not emptyPermissions and (validIdentifiers[cam.id] or validJobs[cam.id]) then
+                        if not isCameraAlreadyAdded(cam.id) then
+                            for _, file in ipairs(files) do
+                                if file.id == cam.id then
+                                    table.insert(cameras, {cameras = file})
                                 end
                             end
                         end
                     end
                 end
 
-                jobs_count = jobs_count + 1
-                if jobs_count == jobs_total then
-                    TriggerClientEvent('videoRecordingCameras:requestCamerasPermission', source_, cameras)
-                end
-            end)
+                TriggerClientEvent('videoRecordingCameras:requestCamerasPermission', source_, cameras)
+            end
+        end
+
+        for _, cam in ipairs(Config.Cams) do
+            for _, job in ipairs(cam.permissions.jobs) do
+                MySQL.Async.fetchAll(Config.JobsTableQuery, { ["@job"] = job.name }, function(result)
+                    processJobResult(cam.id, result)
+                end)
+            end
         end
     end
+
+    checkIdentifiers()
+    checkJobs()
 end)
+
 
 function tprint(tbl, indent)
     if not indent then indent = 0 end
