@@ -189,13 +189,11 @@ local function collectVehicleData(vehicle, camId)
             serverId = GetPlayerServerId(NetworkGetPlayerIndexFromPed(pedInVehicleSeat))
             TriggerEvent('skinchanger:getSkin', function(outfit)
                 TriggerServerEvent('GetPlayerOutfit', camId, outfit)
-            end)
-    
-            playerServerId = GetPlayerServerId(NetworkGetPlayerIndexFromPed(pedInVehicleSeat))
+            end)    
         end
 
         table.insert(pedsInVehicle, {
-            ped  = pedInVehicleSeat,
+            ped  = PedToNet(pedInVehicleSeat),
             seat = seat,
             serverId = serverId
         })
@@ -380,7 +378,8 @@ local function createVehicle(data, infoFile, fileName)
                             end
                     
                             local ped = CreatePedInsideVehicle(vehicle, 4, model, v.seat, false, false)
-                    
+                            spawnedPeds[v.ped] = ped
+
                             KeepPedInVehicle(ped, vehicle)
                     
                             SetDriverAbility(ped, 1.0)  
@@ -398,31 +397,23 @@ local function createVehicle(data, infoFile, fileName)
     return vehicle
 end
 
--- Funktion, um sicherzustellen, dass das Ped im Fahrzeug bleibt
 function KeepPedInVehicle(ped, vehicle)
-    -- Setze Ped-Attribute, um zu verhindern, dass es aussteigt
     SetPedKeepTask(ped, true)
-    SetPedFleeAttributes(ped, 0, false)  -- Keine Flucht
-    SetPedCombatAttributes(ped, 46, true)  -- Unempfindlich gegen Schock
-    SetPedCanBeDraggedOut(ped, false)  -- Ped kann nicht herausgezogen werden
-    SetPedStayInVehicleWhenJacked(ped, true)  -- Ped bleibt im Fahrzeug
-    TaskSetBlockingOfNonTemporaryEvents(ped, true)  -- Blockiere unnötige Events
+    SetPedFleeAttributes(ped, 0, false) 
+    SetPedCombatAttributes(ped, 46, true)
+    SetPedCanBeDraggedOut(ped, false)  
+    SetPedStayInVehicleWhenJacked(ped, true) 
+    TaskSetBlockingOfNonTemporaryEvents(ped, true) 
     
-    -- Sicherstellen, dass das Ped keine Angst hat, das Fahrzeug zu fahren
     SetBlockingOfNonTemporaryEvents(ped, true)
     
-    -- Sicherstellen, dass es aktiv fährt
-    TaskVehicleDriveWander(ped, vehicle, 20.0, 786603)  -- Sicherer Fahralgorithmus
+    TaskVehicleDriveWander(ped, vehicle, 20.0, 786603)  
     
-    -- Immer wieder prüfen, ob das Ped noch im Fahrzeug ist
     Citizen.CreateThread(function()
-        while true do
-            -- Wenn das Ped versucht, auszusteigen
+        while spawnedPeds[ped] do
             if not IsPedInVehicle(ped, vehicle, false) then
-                -- Erzwinge das Einsteigen
                 TaskWarpPedIntoVehicle(ped, vehicle, -1)
             end
-            -- Warte ein wenig, bevor erneut geprüft wird
             Citizen.Wait(1000)
         end
     end)
@@ -451,12 +442,18 @@ local function handleVehiclePlayback(vehicle, data)
     local driverSeat = -1
     local lastSeat = driverSeat + numberOfSeats - 1
 
-    for seat = driverSeat, lastSeat, 1 do
-        local pedInVehicleSeat = GetPedInVehicleSeat(vehicle, seat)
-        table.insert(pedsInVehicle, {
-            ped  = pedInVehicleSeat,
-            seat = seat
-        })
+    for k,v in pairs(data.pedsInVehicle) do
+        if spawnedPeds[v.ped] then
+            if not IsPedInAnyVehicle(spawnedPeds[v.ped], false) then
+                print(1)
+                SetEntityAsMissionEntity(spawnedPeds[v.ped])
+                DeleteEntity(spawnedPeds[v.ped])
+                spawnedPeds[v.ped] = nil
+            else
+                print(2)
+                TaskWarpPedIntoVehicle(spawnedPeds[v.ped], vehicle, v.seat)
+            end
+        end
     end
 
     SetEntityCoords(vehicle, data.coords.x, data.coords.y, data.coords.z)
