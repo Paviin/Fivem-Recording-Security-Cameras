@@ -147,6 +147,7 @@ RegisterNUICallback('watchCam', function(id)
                     menuOpen = true
                     SetNuiFocus(true, true)
                     SendNUIMessage({action = "open"})
+                    DisableControlAction(0, 200, false) 
                     resetCamera()
                     break
                 end

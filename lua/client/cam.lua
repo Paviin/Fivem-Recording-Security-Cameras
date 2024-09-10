@@ -143,7 +143,7 @@ local function collectPedData(ped, camId)
     local isAiming = false
 
     if isPlayer then
-        isAiming = IsPlayerFreeAiming(PlayerId()) or IsPedShooting(ped)
+        isAiming = IsPlayerFreeAiming(NetworkGetPlayerIndexFromPed(ped)) or IsPedShooting(ped)
     else
         isAiming = IsPedAimingFromCover(ped) or IsPedShooting(ped)
     end
@@ -157,6 +157,8 @@ local function collectPedData(ped, camId)
         isInVehicle = IsPedInAnyVehicle(ped, false),
         currentAnimation = GetEntityAnimCurrentTime(ped),
         isAiming = isAiming,
+        isDead = IsPedDeadOrDying(ped, false),
+        speed = GetEntitySpeed(ped),
         pedWeapon = GetSelectedPedWeapon(ped),
         aimCoords = GetAimCoords(ped),
         isRunning = IsPedRunning(ped),
@@ -195,7 +197,8 @@ local function collectVehicleData(vehicle, camId)
         table.insert(pedsInVehicle, {
             ped  = PedToNet(pedInVehicleSeat),
             seat = seat,
-            serverId = serverId
+            serverId = serverId,
+            isDead = IsPedDeadOrDying(ped, false),
         })
     end
 
@@ -321,22 +324,31 @@ RegisterCommand('aufnahme', function()
 end)
 
 local function createPed(data, infoFile, fileName)
-    local model = GetHashKey("mp_m_freemode_01")
-    RequestModel(model)
-    while not HasModelLoaded(model) do
-        Wait(100)
-    end
-    local ped = CreatePed(4, GetHashKey("mp_m_freemode_01"), data.coords.x, data.coords.y, data.coords.z, data.heading, false, false)
+    local ped
 
     for k,v in pairs(infoFile.skins) do
         if v[fileName] then
             for k_,v_ in pairs(v[fileName]) do 
                 if data.playerServerId == v_.id then
+
+                    local model = GetHashKey("mp_m_freemode_01")
+                    if v_.skin.sex == 1 then
+                        model = GetHashKey("mp_f_freemode_01")
+                    end
+
+                    RequestModel(model)
+                    while not HasModelLoaded(model) do
+                        Wait(100)
+                    end
+
+                    ped = CreatePed(4, model, data.coords.x, data.coords.y, data.coords.z, data.heading, false, false)
+
                     ApplySkin(ped, v_.skin)
                 end
             end
         end
     end
+
     spawnedPeds[data.pedId] = ped
     return ped
 end
@@ -365,7 +377,7 @@ local function createVehicle(data, infoFile, fileName)
             for k_, v_ in pairs(infoFile.skins) do
                 if v_[fileName] then
                     for k__, v__ in pairs(v_[fileName]) do
-                        if v.serverId == v__.id then
+                        if v.serverId == v__.id and IsVehicleSeatFree(vehicle, v.seat) then
 
                             local model = GetHashKey("mp_m_freemode_01")
                             if v__.skin.sex == 1 then
@@ -376,7 +388,7 @@ local function createVehicle(data, infoFile, fileName)
                             while not HasModelLoaded(model) do
                                 Wait(100)
                             end
-                    
+                
                             local ped = CreatePedInsideVehicle(vehicle, 4, model, v.seat, false, false)
                             spawnedPeds[v.ped] = ped
 
@@ -424,8 +436,15 @@ local function handlePedPlayback(ped, data)
     while not HasAnimDictLoaded("move_m@brave") do
         Citizen.Wait(0)
     end
+
+    if data.speed > 1.0 then
+        TaskPlayAnim(ped, "move_m@brave", "walk", 8.0, -8.0, -1, 1, 0, false, false, false)
+    end
+
+    if data.isDead then
+        SetEntityHealth(ped, 0.0)
+    end
     
-    TaskPlayAnim(ped, "move_m@brave", "walk", 8.0, -8.0, -1, 1, 0, false, false, false)
     SetEntityCoords(ped, data.coords.x, data.coords.y, data.coords.z - 1.0)
     FreezeEntityPosition(ped, true)
     SetEntityHeading(ped, data.heading)
@@ -434,6 +453,7 @@ local function handlePedPlayback(ped, data)
         GiveWeaponToPed(ped, data.pedWeapon, 100, false, true)
         TaskAimGunAtCoord(ped, data.aimCoords.hitCoords.x, data.aimCoords.hitCoords.y, data.aimCoords.hitCoords.z, -1)
     end
+
 end
 
 local function handleVehiclePlayback(vehicle, data)
@@ -443,16 +463,12 @@ local function handleVehiclePlayback(vehicle, data)
     local lastSeat = driverSeat + numberOfSeats - 1
 
     for k,v in pairs(data.pedsInVehicle) do
+        DrawRectAroundPed(spawnedPeds[v.ped], false)
         if spawnedPeds[v.ped] then
-            if not IsPedInAnyVehicle(spawnedPeds[v.ped], false) then
-                print(1)
-                SetEntityAsMissionEntity(spawnedPeds[v.ped])
-                DeleteEntity(spawnedPeds[v.ped])
-                spawnedPeds[v.ped] = nil
-            else
-                print(2)
-                TaskWarpPedIntoVehicle(spawnedPeds[v.ped], vehicle, v.seat)
-            end
+            TaskWarpPedIntoVehicle(spawnedPeds[v.ped], vehicle, v.seat)
+        end
+        if v.isDead then
+            SetEntityHealth(v.ped, 0.0)
         end
     end
 
@@ -503,7 +519,6 @@ local function removeNonRecordedEntities()
                     end
                 end
 
-                --[[ 
                 for _, ped in ipairs(allPeds) do
                     local pedShouldBeVisible = false
 
@@ -518,7 +533,7 @@ local function removeNonRecordedEntities()
                         SetEntityVisible(ped, false, false)
                         SetEntityNoCollisionEntity(ped, PlayerPedId(), false) 
                     end
-                end]]
+                end
                 
             end
 
@@ -568,9 +583,11 @@ function watchVideo(file, infoFile, fileName)
             if data.type == 'ped' then
                 local ped = spawnedPeds[data.pedId] or createPed(data, infoFile, fileName)
                 handlePedPlayback(ped, data)
+                DrawRectAroundPed(spawnedPeds[data.pedId], false)
             elseif data.type == 'vehicle' then
                 local vehicle = spawnedVehicles[data.plate] or createVehicle(data, infoFile, fileName)
                 handleVehiclePlayback(vehicle, data)
+                DrawRectAroundPed(vehicle, true)
             end
             index = index + 1
             local adjustedWaitTime = 1000 / (#file / 30)
@@ -642,6 +659,61 @@ function watchVideo(file, infoFile, fileName)
             elseif IsControlPressed(0, 16) then
                 fov = math.min(maxFov, fov + 5)
             end
+            DisableControlAction(0, 200, true) 
+
+            if IsControlJustPressed(0, 202) then
+                TriggerServerEvent('videoRecordingCameras:requestCamerasPermission')
+                SetTimecycleModifierStrength(0.0)
+                menuOpen = true
+                SetNuiFocus(true, true)
+                SendNUIMessage({action = "open"})
+                DisableControlAction(0, 200, false) 
+
+                RenderScriptCams(false, false, 0, true, true)
+                FreezeEntityPosition(ped, false)
+                SetEntityCoords(ped, oldCoords)
+                SetEntityAlpha(ped, 255, false)
+                SetTimecycleModifierStrength(0.0)
+                DisplayHud(true)
+                DisplayRadar(true)
+                SetTimecycleModifier("None")
+                playbackRecording = false
+
+                for _, spawnedVehicle in pairs(spawnedVehicles) do
+                    local numberOfSeats = GetVehicleModelNumberOfSeats(GetEntityModel(spawnedVehicle))
+                    local pedsInVehicle = {}
+                    local driverSeat = -1
+                    local lastSeat = driverSeat + numberOfSeats - 1
+        
+                    for seat=driverSeat, lastSeat, 1 do
+                        local pedInVehicleSeat = GetPedInVehicleSeat(spawnedVehicle, seat)
+                        SetEntityAsMissionEntity(pedInVehicleSeat)
+                        DeleteEntity(pedInVehicleSeat)
+                    end
+
+                    SetEntityAsMissionEntity(spawnedVehicle)
+                    DeleteEntity(spawnedVehicle)
+                end
+
+                for _, spawnedPed in pairs(spawnedPeds) do
+                    SetEntityAsMissionEntity(spawnedPed)
+                    DeleteEntity(spawnedPed)
+                end
+
+                for _, deletedVehicle in pairs(deletedVehicles) do
+                    SetEntityAlpha(deletedVehicle, 255, true)
+                    SetEntityVisible(deletedVehicle, true, true)
+                
+                    for _, spawnedVehicle in pairs(spawnedVehicles) do
+                        SetEntityNoCollisionEntity(deletedVehicle, spawnedVehicle, true)
+                    end
+                end
+
+                spawnedPeds = {}
+                spawnedVehicles = {}
+                playbackRecording = false
+                break
+            end
 
             SetCamRot(cam, vertical, 0.0, infoFile.heading + horizontal)
             SetCamFov(cam, fov)
@@ -649,6 +721,72 @@ function watchVideo(file, infoFile, fileName)
             Citizen.Wait(0)
         end
     end)
+end
+
+local rects = {}
+function DrawRectAroundPed(ped, isVehicle)
+    if not rects[ped] and ped then
+        rects[ped] = ped
+        Citizen.CreateThread(function()
+            local breakLoop = false
+            while playbackRecording and not breakLoop do
+                local isPedInVehicle = false
+                if IsPedInAnyVehicle(ped, false) then 
+                    isPedInVehicle = true
+                else
+                    isPedInVehicle = false
+                end
+                for k, v in pairs(spawnedPeds) do
+                    local found = false
+                    if v == ped then
+                        found = true
+                    end
+                    if k == #spawnedPeds and not found then
+                        breakLoop = true
+                    end
+                end
+                local pedPos = GetEntityCoords(ped)
+    
+                local onScreen, x, y = GetScreenCoordFromWorldCoord(pedPos.x, pedPos.y, pedPos.z)
+                
+                if onScreen and isEntityVisibleToCamera(GetEntityCoords(PlayerPedId()), ped) then
+                    local rectWidth = 0.025
+                    local rectHeight = 0.05
+
+                    for k, v in pairs(spawnedVehicles) do
+                        if IsEntityAVehicle(v) then
+                            local vehCoords = GetEntityCoords(v)
+                            local onScreen_, x_, y_ =  GetScreenCoordFromWorldCoord(vehCoords.x, vehCoords.y, vehCoords.z) 
+                            DrawRectOutline(x_, y_, 0.075, 0.15, 0, 0, 255, 50)
+                        end
+                    end
+
+                    if isPedInVehicle then
+                        rectWidth = rectWidth / 2
+                        rectHeight = rectHeight / 2
+
+                        local headPos = GetPedBoneCoords(ped, 12844, 0.0, 0.0, 0.0) 
+                        onScreen, x, y = GetScreenCoordFromWorldCoord(headPos.x, headPos.y, headPos.z)
+                        DrawRectOutline(x, y, rectWidth, rectHeight, 0, 255, 0, 255) 
+                    end
+
+                    if not isPedInVehicle and not isVehicle then
+                        DrawRectOutline(x, y, rectWidth, rectHeight, 255, 0, 0, 255) 
+                    end
+                end
+                Citizen.Wait()
+            end
+        end)
+    end
+end
+
+function DrawRectOutline(x, y, width, height, r, g, b, a)
+    local thickness = 0.0015 
+
+    DrawRect(x, y - height / 2, width, thickness, r, g, b, a)
+    DrawRect(x, y + height / 2, width, thickness, r, g, b, a)
+    DrawRect(x - width / 2, y, thickness, height, r, g, b, a)
+    DrawRect(x + width / 2, y, thickness, height, r, g, b, a)
 end
 
 local LastSex     = -1
@@ -660,42 +798,42 @@ function ApplySkin(ped, skin)
     local playerPed = ped
     SetPedHeadBlendData     (playerPed, skin['face'], skin['face'], skin['face'], skin['skin'], skin['skin'], skin['skin'], 1.0, 1.0, 1.0, true)
 
-  SetPedHairColor         (playerPed,       skin['hair_color_1'],   skin['hair_color_2'])           -- Hair Color
-  SetPedHeadOverlay       (playerPed, 3,    skin['age_1'],         (skin['age_2'] / 10) + 0.0)      -- Age + opacity
-  SetPedHeadOverlay       (playerPed, 1,    skin['beard_1'],       (skin['beard_2'] / 10) + 0.0)    -- Beard + opacity
-  SetPedHeadOverlay       (playerPed, 2,    skin['eyebrows_1'],    (skin['eyebrows_2'] / 10) + 0.0) -- Eyebrows + opacity
-  SetPedHeadOverlay       (playerPed, 4,    skin['makeup_1'],      (skin['makeup_2'] / 10) + 0.0)   -- Makeup + opacity
-  SetPedHeadOverlay       (playerPed, 8,    skin['lipstick_1'],    (skin['lipstick_2'] / 10) + 0.0) -- Lipstick + opacity
-  SetPedComponentVariation(playerPed, 2,    skin['hair_1'],         skin['hair_2'], 2)              -- Hair
-  SetPedHeadOverlayColor  (playerPed, 1, 1, skin['beard_3'],        skin['beard_4'])                -- Beard Color
-  SetPedHeadOverlayColor  (playerPed, 2, 1, skin['eyebrows_3'],     skin['eyebrows_4'])             -- Eyebrows Color
-  SetPedHeadOverlayColor  (playerPed, 4, 1, skin['makeup_3'],       skin['makeup_4'])               -- Makeup Color
-  SetPedHeadOverlayColor  (playerPed, 8, 1, skin['lipstick_3'],     skin['lipstick_4'])             -- Lipstick Color
+    SetPedHairColor         (playerPed,       skin['hair_color_1'],   skin['hair_color_2'])           -- Hair Color
+    SetPedHeadOverlay       (playerPed, 3,    skin['age_1'],         (skin['age_2'] / 10) + 0.0)      -- Age + opacity
+    SetPedHeadOverlay       (playerPed, 1,    skin['beard_1'],       (skin['beard_2'] / 10) + 0.0)    -- Beard + opacity
+    SetPedHeadOverlay       (playerPed, 2,    skin['eyebrows_1'],    (skin['eyebrows_2'] / 10) + 0.0) -- Eyebrows + opacity
+    SetPedHeadOverlay       (playerPed, 4,    skin['makeup_1'],      (skin['makeup_2'] / 10) + 0.0)   -- Makeup + opacity
+    SetPedHeadOverlay       (playerPed, 8,    skin['lipstick_1'],    (skin['lipstick_2'] / 10) + 0.0) -- Lipstick + opacity
+    SetPedComponentVariation(playerPed, 2,    skin['hair_1'],         skin['hair_2'], 2)              -- Hair
+    SetPedHeadOverlayColor  (playerPed, 1, 1, skin['beard_3'],        skin['beard_4'])                -- Beard Color
+    SetPedHeadOverlayColor  (playerPed, 2, 1, skin['eyebrows_3'],     skin['eyebrows_4'])             -- Eyebrows Color
+    SetPedHeadOverlayColor  (playerPed, 4, 1, skin['makeup_3'],       skin['makeup_4'])               -- Makeup Color
+    SetPedHeadOverlayColor  (playerPed, 8, 1, skin['lipstick_3'],     skin['lipstick_4'])             -- Lipstick Color
 
-  if skin['ears_1'] == -1 then
-    ClearPedProp(playerPed, 2)
-  else
-    SetPedPropIndex(playerPed, 2, skin['ears_1'], skin['ears_2'], 2)  -- Ears Accessories
-  end
+    if skin['ears_1'] == -1 then
+        ClearPedProp(playerPed, 2)
+    else
+        SetPedPropIndex(playerPed, 2, skin['ears_1'], skin['ears_2'], 2)  -- Ears Accessories
+    end
 
-  SetPedComponentVariation(playerPed, 8,  skin['tshirt_1'],  skin['tshirt_2'], 2)     -- Tshirt
-  SetPedComponentVariation(playerPed, 11, skin['torso_1'],   skin['torso_2'], 2)      -- torso parts
-  SetPedComponentVariation(playerPed, 3,  skin['arms'], 0, 2)                              -- torso
-  SetPedComponentVariation(playerPed, 10, skin['decals_1'],  skin['decals_2'], 2)     -- decals
-  SetPedComponentVariation(playerPed, 4,  skin['pants_1'],   skin['pants_2'], 2)      -- pants
-  SetPedComponentVariation(playerPed, 6,  skin['shoes_1'],   skin['shoes_2'], 2)      -- shoes
-  SetPedComponentVariation(playerPed, 1,  skin['mask_1'],    skin['mask_2'], 2)       -- mask
-  SetPedComponentVariation(playerPed, 9,  skin['bproof_1'],  skin['bproof_2'], 2)     -- bulletproof
-  SetPedComponentVariation(playerPed, 7,  skin['chain_1'],   skin['chain_2'], 2)      -- chain
-  SetPedComponentVariation(playerPed, 5,  skin['bags_1'],    skin['bags_2'], 2)       -- Bag
+    SetPedComponentVariation(playerPed, 8,  skin['tshirt_1'],  skin['tshirt_2'], 2)     -- Tshirt
+    SetPedComponentVariation(playerPed, 11, skin['torso_1'],   skin['torso_2'], 2)      -- torso parts
+    SetPedComponentVariation(playerPed, 3,  skin['arms'], 0, 2)                              -- torso
+    SetPedComponentVariation(playerPed, 10, skin['decals_1'],  skin['decals_2'], 2)     -- decals
+    SetPedComponentVariation(playerPed, 4,  skin['pants_1'],   skin['pants_2'], 2)      -- pants
+    SetPedComponentVariation(playerPed, 6,  skin['shoes_1'],   skin['shoes_2'], 2)      -- shoes
+    SetPedComponentVariation(playerPed, 1,  skin['mask_1'],    skin['mask_2'], 2)       -- mask
+    SetPedComponentVariation(playerPed, 9,  skin['bproof_1'],  skin['bproof_2'], 2)     -- bulletproof
+    SetPedComponentVariation(playerPed, 7,  skin['chain_1'],   skin['chain_2'], 2)      -- chain
+    SetPedComponentVariation(playerPed, 5,  skin['bags_1'],    skin['bags_2'], 2)       -- Bag
 
-  if skin['helmet_1'] == -1 then
-    ClearPedProp(playerPed, 0)
-  else
-    SetPedPropIndex(playerPed, 0, skin['helmet_1'], skin['helmet_2'], 2)  -- Helmet
-  end
+    if skin['helmet_1'] == -1 then
+        ClearPedProp(playerPed, 0)
+    else
+        SetPedPropIndex(playerPed, 0, skin['helmet_1'], skin['helmet_2'], 2)  -- Helmet
+    end
 
-  SetPedPropIndex(playerPed, 1, skin['glasses_1'], skin['glasses_2'], 2)  -- Glasses
+    SetPedPropIndex(playerPed, 1, skin['glasses_1'], skin['glasses_2'], 2)  -- Glasses
 
     SetPedHeadBlendData(ped, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, true)
     SetPedHairColor(ped, skin.hair_color_1, skin.hair_color_2)

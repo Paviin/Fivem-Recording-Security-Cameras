@@ -23,13 +23,13 @@ body{
 }
 
 .bg{
-    background-image: url("public/957583.jpg"); /* The image used */
-    height: 100%; /* You must set a specified height */
+    background-image: url("public/957583.jpg");
+    height: 100%; 
     position: absolute;
     width: 100%;
-    background-position: center; /* Center the image */
-    background-repeat: no-repeat; /* Do not repeat the image */
-    background-size: cover; /* Resize the background image to cover the entire container */
+    background-position: center; 
+    background-repeat: no-repeat; 
+    background-size: cover;
 }
 
 .container{
