@@ -1,7 +1,7 @@
 
 Config = {}
 
-Config.Debug = false
+Config.Debug = true
 
 Config.Distance = 20.0
 
@@ -51,60 +51,7 @@ Config.Cams = {
             }
         }
     },
-    {
-        id = 2,
-        title = "Police Cam",
-        description = "Police Cam 2",
-        controlPoint = vector3(-393.0705, -2764.1851, 6.0004),
-        camCoords = vector3(193.5627, 334.4494, 109.4351), 
-        camHeading = 185.5589, 
-        minFov = 1.0,
-        maxFov = 50.0,
-        length = 30, 
-        obj = "prop_cctv_cam_05a", 
-        minCamHeightFov = 5,
-        maxCamHeightFov = 1,
 
-        permissions = {
-            jobs = {
-                {
-                    name = ""
-                }
-            },
-            identifiers = {
-                {
-                    identifier = "license:d6a4657db0b45d37b70d43840f04b204711be1c6"
-                }
-            }
-        }
-    },
-    {
-        id = 3,
-        title = "Po",
-        description = "Police Cam 3",
-        controlPoint = vector3(189.6041, 301.7457, 105.477),
-        camCoords = vector3(143.6130, 195.5773, 113.1878), 
-        camHeading = 287.2511, 
-        minFov = 1.0,
-        maxFov = 70.0,
-        length = 150, 
-        obj = "prop_cctv_cam_05a", 
-        minCamHeightFov = 20,
-        maxCamHeightFov = 10,
-        
-        permissions = {
-            jobs = {
-                {
-                    name = "unemployed"
-                }
-            },
-            identifiers = {
-                {
-                    identifier = ""
-                }
-            }
-        }
-    },
     {
         id = 4,
         title = "Casino",

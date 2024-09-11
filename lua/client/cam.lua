@@ -125,7 +125,7 @@ function GetAimCoords(ped)
     return {weaponPos = weaponPos, hitCoords = hitCoords}
 end
 
-local function collectPedData(ped, camId)
+local function collectPedData(ped, camId, timer)
     local pedCoords = GetEntityCoords(ped)
     local weapon = GetSelectedPedWeapon(ped)
     local playerServerId = -1
@@ -150,7 +150,8 @@ local function collectPedData(ped, camId)
 
     return {
         type = 'ped',
-        pedId = PedToNet(ped),
+        timer = timer,
+        pedId = NetworkGetNetworkIdFromEntity(ped),
         coords = { x = pedCoords.x, y = pedCoords.y, z = pedCoords.z },
         heading = GetEntityHeading(ped),
         weapon = weapon,
@@ -173,7 +174,7 @@ local function collectPedData(ped, camId)
 end
 
 
-local function collectVehicleData(vehicle, camId)
+local function collectVehicleData(vehicle, camId, timer)
     local vehicleCoords = GetEntityCoords(vehicle)
     local vehicleSpeed = GetEntitySpeed(vehicle) * 3.6
     local colorPrimary, colorSecondary = GetVehicleColours(vehicle)
@@ -204,6 +205,7 @@ local function collectVehicleData(vehicle, camId)
 
     return {
         type = 'vehicle',
+        timer = timer,
         coords = { x = vehicleCoords.x, y = vehicleCoords.y, z = vehicleCoords.z },
         heading = GetEntityHeading(vehicle),
         model = GetEntityModel(vehicle),
@@ -225,7 +227,7 @@ local function collectVehicleData(vehicle, camId)
     }
 end
 
-local function collectDataInZone()
+local function collectDataInZone(timer)
     local peds = GetGamePool('CPed')
     local vehicles = GetGamePool('CVehicle')
 
@@ -233,9 +235,9 @@ local function collectDataInZone()
         for entity, _ in pairs(entitiesInZone) do
             if DoesEntityExist(entity) and not cam.zone:isPointInside(GetEntityCoords(entity)) then
                 if IsEntityAPed(entity) then
-                    table.insert(recordedData, collectPedData(entity))
+                    table.insert(recordedData, collectPedData(entity, nil, timer))
                 elseif IsEntityAVehicle(entity) then
-                    table.insert(recordedData, collectVehicleData(entity))
+                    table.insert(recordedData, collectVehicleData(entity, nil, timer))
                 end
                 entitiesInZone[entity] = nil
             end
@@ -245,7 +247,7 @@ local function collectDataInZone()
             if DoesEntityExist(ped) and cam.zone:isPointInside(GetEntityCoords(ped)) and isEntityVisibleToCamera(cam.coords, ped) and GetVehiclePedIsIn(ped, false) == 0 then
                 entitiesInZone[ped] = true
 
-                table.insert(recordedData, collectPedData(ped, cam.id))
+                table.insert(recordedData, collectPedData(ped, cam.id, timer))
             end
         end
 
@@ -253,7 +255,7 @@ local function collectDataInZone()
             if DoesEntityExist(vehicle) and cam.zone:isPointInside(GetEntityCoords(vehicle)) and isEntityVisibleToCamera(cam.coords, vehicle) then
                 entitiesInZone[vehicle] = true
 
-                table.insert(recordedData, collectVehicleData(vehicle, cam.id))
+                table.insert(recordedData, collectVehicleData(vehicle, cam.id, timer))
             end
         end
     end
@@ -273,10 +275,11 @@ Citizen.CreateThread(function()
                     cam.recordingThreadActive = false
                 end
 
+                cam.timer = 0
                 cam.recordingThreadActive = true
                 cam.recordingThread = Citizen.CreateThread(function()
                     while cam.recordingThreadActive do
-
+                        cam.timer = cam.timer + 1
                         --[[if not isEntityVisibleToCamera(cam.coords, PlayerPedId()) then
                             print("Entität nicht sichtbar, Aufnahme wird gestoppt und gespeichert")
                             cam.recordingThreadActive = false
@@ -286,8 +289,9 @@ Citizen.CreateThread(function()
                         if #recordedData >= 500 then
                             TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.minFov, cam.maxFov)
                             recordedData = {}
+                            cam.timer = 0
                         else
-                            collectDataInZone()
+                            collectDataInZone(cam.timer)
                         end
                         Citizen.Wait(500)
                     end
@@ -295,6 +299,7 @@ Citizen.CreateThread(function()
                     if not cam.recordingThreadActive and #recordedData > 5 then
                         TriggerServerEvent('videoRecordingCameras:createCacheFile', json.encode(recordedData), cam.id, cam.zone.center, cam.coords, cam.heading, cam.title, cam.description, cam.minFov, cam.maxFov)
                         recordedData = {}
+                        cam.timer = 0
                     end
                 end)
             else
@@ -563,7 +568,7 @@ function watchVideo(file, infoFile, fileName)
 
     local cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
     SetTimecycleModifier("CAMERA_secuirity_FUZZ")
-    SetTimecycleModifierStrength(0.8)
+    SetTimecycleModifierStrength(0.4)
     SetCamCoord(cam, infoFile.coords.x, infoFile.coords.y, infoFile.coords.z - 0.25)
     local fov = infoFile.maxFov / 2.1
     SetCamFov(cam, fov)
@@ -577,9 +582,21 @@ function watchVideo(file, infoFile, fileName)
 
     Citizen.CreateThread(function()
         local index = 1
+        local timer = 0
 
         while playbackRecording and index <= #file do
             local data = file[index]
+            
+            if file[#file].timer then
+               timer = file[#file].timer 
+            else
+                for k,v in pairs(file) do
+                    if v.timer > timer and v.timer then
+                        timer = v.timer
+                    end
+                end
+            end
+
             if data.type == 'ped' then
                 local ped = spawnedPeds[data.pedId] or createPed(data, infoFile, fileName)
                 handlePedPlayback(ped, data)
@@ -589,20 +606,26 @@ function watchVideo(file, infoFile, fileName)
                 handleVehiclePlayback(vehicle, data)
                 DrawRectAroundPed(vehicle, true)
             end
+
             index = index + 1
-            local adjustedWaitTime = 1000 / (#file / 30)
-            Citizen.Wait(adjustedWaitTime)
+            
+            Citizen.Wait(500 / (#file / timer))
         end
 
-        RenderScriptCams(false, false, 0, true, true)
+        TriggerServerEvent('videoRecordingCameras:requestCamerasPermission')
         FreezeEntityPosition(ped, false)
         SetEntityCoords(ped, oldCoords)
         SetEntityAlpha(ped, 255, false)
         SetTimecycleModifierStrength(0.0)
+        menuOpen = true
+        SetNuiFocus(true, true)
+        SendNUIMessage({action = "open"})
+        DisableControlAction(0, 200, false) 
+        RenderScriptCams(false, false, 0, true, true)
+        DestroyCam(cam, false)
+        SetTimecycleModifierStrength(0.0)
         DisplayHud(true)
         DisplayRadar(true)
-        SetTimecycleModifier("None")
-        menuOpen = false
         playbackRecording = false
 
         for _, spawnedVehicle in pairs(spawnedVehicles) do
@@ -663,21 +686,19 @@ function watchVideo(file, infoFile, fileName)
 
             if IsControlJustPressed(0, 202) then
                 TriggerServerEvent('videoRecordingCameras:requestCamerasPermission')
+                FreezeEntityPosition(ped, false)
+                SetEntityCoords(ped, oldCoords)
+                SetEntityAlpha(ped, 255, false)
                 SetTimecycleModifierStrength(0.0)
                 menuOpen = true
                 SetNuiFocus(true, true)
                 SendNUIMessage({action = "open"})
                 DisableControlAction(0, 200, false) 
-
                 RenderScriptCams(false, false, 0, true, true)
-                FreezeEntityPosition(ped, false)
-                SetEntityCoords(ped, oldCoords)
-                SetEntityAlpha(ped, 255, false)
+                DestroyCam(cam, false)
                 SetTimecycleModifierStrength(0.0)
                 DisplayHud(true)
                 DisplayRadar(true)
-                SetTimecycleModifier("None")
-                playbackRecording = false
 
                 for _, spawnedVehicle in pairs(spawnedVehicles) do
                     local numberOfSeats = GetVehicleModelNumberOfSeats(GetEntityModel(spawnedVehicle))
@@ -757,7 +778,7 @@ function DrawRectAroundPed(ped, isVehicle)
                         if IsEntityAVehicle(v) then
                             local vehCoords = GetEntityCoords(v)
                             local onScreen_, x_, y_ =  GetScreenCoordFromWorldCoord(vehCoords.x, vehCoords.y, vehCoords.z) 
-                            DrawRectOutline(x_, y_, 0.075, 0.15, 0, 0, 255, 50)
+                            DrawRectOutline(x_, y_, 0.075, 0.15, 0, 0, 255, 255)
                         end
                     end
 

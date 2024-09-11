@@ -147,19 +147,20 @@ local data2 = {} -- weil man data[camId][source_] anscheinend nicht machen kann 
 
 RegisterNetEvent('GetPlayerOutfit')
 AddEventHandler('GetPlayerOutfit', function(camId, outfit)
-    local source_ = source
+	if camId then
+		local source_ = source
 
-    if not data[camId] then
-        data[camId] = {}
-		data2[camId] = {}
-    end
+		if not data[camId] then
+			data[camId] = {}
+			data2[camId] = {}
+		end
 
-	if not data2[camId][source_] then
-		table.insert( data[camId], {
-			skin = outfit,
-			id   = source_
-		} )	
-		data2[camId][source_] = {}
+		if not data2[camId][source_] then
+			table.insert( data[camId], {
+				skin = outfit,
+				id   = source_
+			} )	
+			data2[camId][source_] = {}
+		end
 	end
-
 end)

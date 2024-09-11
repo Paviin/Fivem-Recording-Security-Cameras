@@ -76,6 +76,7 @@ const watchRecording = (camera, video) => {
     cameras = {};
     videos  = {}; 
     inMenu  = false;
+    inRecordingMenu = false
     document.body.style.display = "none"
 }
 
@@ -112,11 +113,12 @@ const closeMenu = () => {
     videos  = {}; 
     inMenu = false;    
     document.body.style.display = "none"
-    post("close")
+    post("close")    
 }
 
 document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape' && inMenu) {        
+    
+    if (event.key === 'Escape' && inMenu) {                
         closeMenu()
     }
 
