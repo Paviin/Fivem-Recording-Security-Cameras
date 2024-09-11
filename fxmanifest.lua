@@ -7,7 +7,7 @@ version '1.0.0'
 
 shared_scripts {
     'config.lua',
-    'locales.lua',
+    'locales.lua'
 }
 
 client_scripts {
