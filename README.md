@@ -48,6 +48,9 @@ In the `config.lua` file, you can modify the following settings:
 - **Dynamic Camera Placement**: Future versions may allow players to place cameras dynamically in-game.
 - **Enhanced Playback Features**: Additional controls for rewinding and fast-forwarding video may be added.
 
+## Preview
+https://streamable.com/at338v
+
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
