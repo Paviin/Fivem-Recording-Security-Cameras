@@ -87,14 +87,15 @@ const recordings = (i) => {
     
     for (const index in cameras[i].cameras.videos) {
         const formattedDate = cameras[i].cameras.videos[index].replace(/(\d{2})\.(\d{2})\.(\d{4})_(\d{2})\.(\d{2})\.(\d{2})(?:\.json)?$/, '$3-$2-$1 $4:$5:$6');
-
+        const index_ = cameras[i].cameras.id - 1
+        
         let appendData = `
             <div class="camera-box">
                 <div class="camera-description">
                     <p class="camera-description-top">${formattedDate}</p>
                 </div>
                 <div class="camera-actions">
-                    <button onclick=watchRecording(${[i, index]})>Video anschauen</button>
+                    <button onclick=watchRecording(${[index_, index]})>Video anschauen</button>
                 </div>
             </div>
         `

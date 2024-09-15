@@ -107,6 +107,8 @@ AddEventHandler('videoRecordingCameras:watchVideo', function(camIndex, videoInde
 	local file = getVideoCacheFile()
 	local video
 	local fileName
+
+	print(camIndex, videoIndex)
 	for k,v in pairs(file) do
 		if v.id == camIndex then
 			file = v

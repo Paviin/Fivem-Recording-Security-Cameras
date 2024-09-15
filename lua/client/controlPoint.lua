@@ -123,7 +123,7 @@ RegisterNUICallback('watchCam', function(id)
         
                             if IsEntityAVehicle(ped) then
                                 DrawRectOutline(x, y, rectWidth, rectHeight, 255, 0, 0, 255) 
-                                Draw2DText(x, y, 0.3, 255, 0, 0, 255, round(GetEntitySpeed(ped)).."Km/h")
+                                Draw2DText(x, y, 0.3, 255, 0, 0, 255, round(GetEntitySpeed(ped) * 3.6).."Km/h")
                                 Draw2DText(x, y + 0.015, 0.3, 255, 0, 0, 255, GetVehicleNumberPlateText(ped))
                             else
                                 if IsPedInAnyVehicle(ped, false) then
