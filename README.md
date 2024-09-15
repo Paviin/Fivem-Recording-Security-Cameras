@@ -4,6 +4,9 @@
 
 This **FiveM script** allows players to view and record security camera footage in real time. It’s designed to enhance **roleplay scenarios** such as police surveillance or property monitoring. The system enables **live monitoring**, **automatic recording**, and the ability to **replay** previously recorded footage.
 
+## Preview
+https://streamable.com/at338v
+
 ## Features
 - **Camera Viewing**: Players can switch between security cameras in specified locations.
 - **Recording**: Cameras automatically record footage.
@@ -47,9 +50,6 @@ In the `config.lua` file, you can modify the following settings:
 ## Future Updates
 - **Dynamic Camera Placement**: Future versions may allow players to place cameras dynamically in-game.
 - **Enhanced Playback Features**: Additional controls for rewinding and fast-forwarding video may be added.
-
-## Preview
-https://streamable.com/at338v
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
