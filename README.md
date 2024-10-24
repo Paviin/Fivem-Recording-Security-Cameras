@@ -22,7 +22,7 @@ https://streamable.com/at338v
 2. **Move to Your Server Resources**: Place the folder in your server's `resources` directory.
 3. **Configure Your `server.cfg`**: Add the following line to your `server.cfg`:
    ```bash
-   start RecordingSecurityCameras
+   start Fivem-Recording-Security-Cameras
    ```
 4. **Install MySQL**: The script uses **MySQL-Async** for storing camera and recording data. Ensure that your server has MySQL set up and properly configured.
 5. **Customize Settings**: Open the configuration file and set camera positions, recording intervals, and permissions.
