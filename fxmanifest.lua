@@ -36,4 +36,4 @@ files {
     'html/**.*',
 }
 
-dependencies { 'oxmysql' }
+dependencies { 'oxmysql', 'skinchanger' }

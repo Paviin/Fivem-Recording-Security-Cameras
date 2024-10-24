@@ -5,7 +5,8 @@ Config.Debug = false
 
 Config.Distance = 20.0
 
-Config.JobsTableQuery = 'SELECT identifier FROM users WHERE job = @job'
+Config.Framework = "QB" -- "ESX", "QB", or "standalone"
+Config.JobsTableQuery = 'SELECT identifier FROM users WHERE job = @job' -- FOR STANDALONE!!
 
 Config.Marker = {
     enabled = true,
@@ -43,19 +44,21 @@ Config.Cams = {
         permissions = {
             jobs = {
                 {
-                    name = ""
+                    name = "police",
+                    name = "ambulance"
                 }
             },
             identifiers = {
                 {
-                    identifier = "license:d6a4657db0b45d37b70d43840f04b204711be1c6"
+                    identifier = "license:d6a4657db0b45d37b70d43840f04b204711be1c5",
+                    identifier = "license:d6a4657db0b45d37b70d43840f04b204711be1c6",
                 }
             }
         }
     },
 
     {
-        id = 4,
+        id = 2,
         title = "Casino",
         description = "Casino Garage",
         controlPoint = vector3(969.0598, -4.3849, 81.0416),
@@ -71,12 +74,12 @@ Config.Cams = {
         permissions = {
             jobs = {
                 {
-                    name = "unemployed"
+                    name = "police"
                 }
             },
             identifiers = {
                 {
-                    identifier = ""
+                    identifier = ""     
                 }
             }
         }
