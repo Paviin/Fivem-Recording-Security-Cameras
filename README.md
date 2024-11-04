@@ -24,8 +24,7 @@ https://streamable.com/at338v
    ```bash
    start Fivem-Recording-Security-Cameras
    ```
-4. **Install MySQL**: The script uses **MySQL-Async** for storing camera and recording data. Ensure that your server has MySQL set up and properly configured.
-5. **Customize Settings**: Open the configuration file and set camera positions, recording intervals, and permissions.
+4. **Customize Settings**: Open the configuration file and set camera positions and permissions.
 
 ## Usage
 
